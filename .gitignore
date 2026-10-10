@@ -1,6 +1,9 @@
 # Word/Office 临时锁文件
 ~$*
 
+# 文档处理临时目录（脚本、解析结果、渲染预览）
+_work/
+
 # 系统文件
 Thumbs.db
 Desktop.ini
