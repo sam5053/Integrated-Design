@@ -1,4 +1,4 @@
-@startuml
+@startuml 管理员
 
 actor 管理员 as admin
 participant "贷款系统" as system

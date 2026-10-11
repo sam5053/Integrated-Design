@@ -1,4 +1,4 @@
-@startuml
+@startuml 贷前
 
 autonumber
 actor 贷款人 as user

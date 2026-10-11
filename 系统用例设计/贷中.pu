@@ -1,6 +1,4 @@
-
-
-@startuml
+@startuml 贷中
 
 actor 贷款人 as user
 participant "贷款系统" as system
