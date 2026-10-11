@@ -1,0 +1,17 @@
+@startuml
+
+autonumber
+actor 管理员 as admin
+participant "贷款系统" as system
+database "数据库" as database
+participant 风控模型 as model 
+
+admin -> system: 查询贷款人信息
+system -> database: 检索贷款人信息
+system -> admin: 显示贷款人信息和业务进度
+system -> model: 进行风险评估
+system -> admin: 显示贷款人信息和风险评估结果
+admin -> system:  提交人工批审结果
+
+
+@enduml

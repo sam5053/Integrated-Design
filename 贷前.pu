@@ -1,0 +1,24 @@
+@startuml
+
+autonumber
+actor 贷款人 as user
+participant "贷款系统" as system
+database "数据库" as database
+
+user -> system: 注册并提交身份信息
+system -> database: 存储账户和身份信息
+user -> system: 登录并验证身份
+alt 身份验证成功
+    system -> user: 显示贷款申请界面
+    user -> system: 提交贷款申请
+    system -> database: 存储贷款申请信息
+    system -> user: 显示贷款申请提交成功消息  
+else 身份验证失败
+    system -> user: 显示身份验证失败消息
+end
+user -> system: 查询贷款进度
+system -> database: 检索贷款申请状态
+system -> user: 显示贷款申请状态
+
+
+@enduml
