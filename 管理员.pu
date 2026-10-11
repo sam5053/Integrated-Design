@@ -1,17 +1,23 @@
 @startuml
 
-autonumber
 actor 管理员 as admin
 participant "贷款系统" as system
 database "数据库" as database
 participant 风控模型 as model 
 
-admin -> system: 查询贷款人信息
-system -> database: 检索贷款人信息
-system -> admin: 显示贷款人信息和业务进度
+par
+    autonumber
+    admin -> system: 查询贷款人信息
+    system -> database: 检索贷款人信息
+    system -> admin: 显示贷款人信息和业务进度
+end
+autonumber
 system -> model: 进行风险评估
+model -> system: 返回风险评估结果
+system -> database: 更新贷款申请状态并存储风险评估结果
 system -> admin: 显示贷款人信息和风险评估结果
 admin -> system:  提交人工批审结果
+system -> database: 更新贷款申请状态及人工批审结果
 
 
 @enduml

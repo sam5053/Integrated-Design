@@ -12,7 +12,7 @@ alt 身份验证成功
     system -> user: 显示贷款申请界面
     user -> system: 提交贷款申请
     system -> database: 存储贷款申请信息
-    system -> user: 显示贷款申请提交成功消息  
+    system -> user: 显示贷款申请提交成功消息,提供电子合同 
 else 身份验证失败
     system -> user: 显示身份验证失败消息
 end

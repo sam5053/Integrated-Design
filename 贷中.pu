@@ -6,9 +6,20 @@ actor 贷款人 as user
 participant "贷款系统" as system
 database "数据库" as database
 
-user -> system:  查看还款进度
-user -> system:  提交还款申请
-user -> system:  寻求帮助
-system -> user:  提供热线电话/AI,《用户须知》, 《平台贷款规则》
+par
+    autonumber
+    user -> system:  查看还款进度
+    system -> database: 检索还款进度信息
+    system -> user:  显示还款进度信息
+end
+autonumber
+user -> system:  还款
+system -> database:  更新还款信息
+system -> user:  显示还款成功消息
+par
+    autonumber
+    user -> system:  寻求帮助
+    system -> user:  提供热线电话/AI,《用户须知》, 《平台贷款规则》
+end
 
 @enduml
