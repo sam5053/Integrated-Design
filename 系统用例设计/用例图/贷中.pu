@@ -1,0 +1,13 @@
+@startuml
+
+actor 贷款人 as user
+rectangle "贷款还款" as system {
+    usecase " 还款进度查询" as UC1
+    usecase " 提前还款" as UC2
+    usecase " 正常还款" as UC3  
+    UC3 ..> UC2 : <<extend>>
+}
+user -> UC1
+user -> UC2 
+user -> UC3
+@enduml

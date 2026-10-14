@@ -1,0 +1,17 @@
+@startuml
+
+left to right direction
+actor 审核员 as admin 
+
+rectangle "贷款审批" as system {
+    usecase "查询贷款人信息" as UC1
+    usecase "待审核贷款人工审批" as UC2
+    usecase "查询审核记录" as UC3
+}
+UC1 <.. UC2 : <<include>>
+UC3 <-[hidden]right- UC2
+admin -> UC1 
+admin -> UC2
+admin -> UC3
+
+@enduml

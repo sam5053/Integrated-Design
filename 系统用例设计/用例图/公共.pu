@@ -1,0 +1,17 @@
+@startuml
+
+left to right direction
+
+actor 贷款人 as user
+actor 审核员 as admin
+
+rectangle "登录系统" as system {
+    usecase "注册账户" as UC1
+    usecase "登录与身份分流" as UC2
+    UC1 <.[hidden]. UC2 : <<include>>
+}
+user -> UC1 
+user -> UC2 
+admin -> UC1 
+admin -> UC2 
+@enduml
