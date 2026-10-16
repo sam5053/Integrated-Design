@@ -1,9 +1,10 @@
-@startuml
+@startuml 公共
 
 left to right direction
 
 actor 贷款人 as user
 actor 审核员 as admin
+actor 身份分流系统 as Jack
 
 rectangle "登录系统" as system {
     usecase "注册账户" as UC1
@@ -14,4 +15,5 @@ user -> UC1
 user -> UC2 
 admin -> UC1 
 admin -> UC2 
+Jack -> UC2
 @enduml

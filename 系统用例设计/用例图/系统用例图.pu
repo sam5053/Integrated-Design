@@ -1,0 +1,70 @@
+@startuml 系统用例图
+
+skinparam shadowing false
+skinparam defaultFontName "Microsoft YaHei"
+skinparam defaultFontSize 13
+skinparam ranksep 70
+skinparam nodesep 30
+skinparam ArrowColor #4D4D4D
+skinparam ArrowFontColor #4D4D4D
+skinparam ArrowFontSize 11
+
+skinparam actor {
+    BackgroundColor #FFFFFF
+    BorderColor #4D4D4D
+}
+
+skinparam usecase {
+    BackgroundColor #F7F7F7
+    BorderColor #4D4D4D
+}
+
+title 系统用例图
+
+together {
+    actor "外部服务\n（实名认证、支付、数据源、风控模型）" as Ext <<外部系统>>
+    actor "风控审核人员" as Risk
+    actor "个人贷款用户" as User
+}
+
+rectangle "多数据源融合的互联网个人贷款风控系统" {
+    usecase "用户注册" as UC01
+    usecase "用户登录与身份分流" as UC02
+    usecase "实名认证与银行卡绑定" as UC03
+    usecase "申请贷款" as UC04
+    usecase "查看贷款进度" as UC05
+    usecase "还款" as UC06
+    usecase "查看还款进度" as UC07
+    usecase "帮助与贷款规则查询" as UC08
+    usecase "人工审批" as UC09
+    usecase "查询审核记录" as UC10
+}
+
+User --> UC01
+User --> UC02
+User --> UC03
+User --> UC04
+User --> UC05
+User --> UC06
+User --> UC07
+User --> UC08
+
+Risk --> UC01
+Risk --> UC02
+Risk --> UC09
+Risk --> UC10
+
+Ext --> UC02
+Ext --> UC03
+Ext --> UC06
+Ext --> UC10
+
+UC02 ..> UC01 : <<include>>
+UC04 ..> UC03 : <<include>>
+UC05 ..> UC04 : <<extend>>
+UC07 ..> UC06 : <<extend>>
+UC10 ..> UC09 : <<extend>>
+UC08 ..> UC04 : <<extend>>
+
+
+@enduml

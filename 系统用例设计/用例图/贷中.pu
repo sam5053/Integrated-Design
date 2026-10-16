@@ -1,13 +1,16 @@
-@startuml
+@startuml 贷中
 
 actor 贷款人 as user
+actor 支付系统 as Jack
 rectangle "贷款还款" as system {
     usecase " 还款进度查询" as UC1
-    usecase " 提前还款" as UC2
-    usecase " 正常还款" as UC3  
-    UC3 ..> UC2 : <<extend>>
+    usecase " 还款" as UC2
+    usecase " 提前还款" as UC3
+    usecase " 正常还款" as UC4  
+    UC3 --|> UC2
+    UC4 --|> UC2
 }
 user -> UC1
 user -> UC2 
-user -> UC3
+Jack -> UC2
 @enduml

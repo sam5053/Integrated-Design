@@ -1,20 +1,25 @@
-@startuml
+@startuml 贷前
 
 left to right direction
 actor 贷款人 as user
+actor 审核系统 as admin
+actor 实名认证系统 as Jack
 
-rectangle "贷款申请" as system {
+rectangle "贷前申请" as system {
     usecase "实名认证与银行卡绑定" as UC1
     usecase "申请贷款" as UC2
     usecase "签订贷款合同" as UC3
     usecase "查看贷款进度" as UC4
-    ' UC1 <.. UC2 : <<include>>
-    ' UC2 <.. UC3 : <<include>>
-    UC3 ..> UC4 : <<extend>>
+    UC1 <.. UC2 : <<include>>
+    UC2 ..> UC3 : <<include>>
+    UC2 <.. UC4 : <<extend>>
 }
 user -> UC1 
 user -> UC2
 user -> UC3
 user -> UC4
+admin -> UC2
+admin -> UC4
+Jack -> UC1
 
 @enduml
