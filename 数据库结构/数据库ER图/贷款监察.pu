@@ -1,0 +1,31 @@
+@startuml 贷款监察
+
+package "贷款监察" {
+
+    entity "贷款监察记录" as loan_monitoring_record {
+    * 监察ID : INT [PK]
+    --
+    申请ID : INT [FK]
+    用户ID : INT [FK]
+    贷款状态 : ENUM('身份资料核验与评估','签订贷款合同','贷款发放','贷中','贷款完成')
+    监察时间 : DATETIME
+    监察报告 : TEXT
+    监察结果 : ENUM('通过', '不通过')
+    }
+
+    entity "贷款日志" as loan_log {
+    * 日志ID : INT [PK]
+    --
+    申请ID : INT [FK]
+    用户ID : INT [FK]
+    合同ID : INT [FK]
+    模型评估ID : INT [FK]
+    人工评估ID : INT [FK]
+    放款ID : INT [FK]
+    还款计划ID : INT [FK]
+    完成情况ID : INT [FK]
+    监察ID列表 : VARCHAR
+    日志时间 : DATETIME
+  }
+}
+@enduml

@@ -1,0 +1,45 @@
+@startuml 身份认证
+
+package "身份认证" {
+
+    entity "账户主表" as user_account {
+    * 用户ID : INT [PK]
+    --
+    用户名 : VARCHAR
+    密码 : VARCHAR
+    邮箱 : VARCHAR
+    手机号 : VARCHAR
+    角色 : ENUM('普通用户', '审核员')
+  }
+
+  entity "实名身份表" as user_identity {
+    * 实名ID : INT [PK]
+    --
+    用户ID : INT [FK]
+    姓名 : VARCHAR
+    身份证号 : VARCHAR
+    认证状态 : ENUM('未认证', '认证中', '已认证', '认证失败')
+    角色 : ENUM('普通用户', '审核员')
+    认证时间 : DATETIME
+  }
+
+  entity "用户银行卡" as user_bank_card {
+    * 银行卡ID : INT [PK]
+    --
+    用户ID : INT [FK]
+    银行卡号 : VARCHAR
+    银行名称 : VARCHAR
+    认证时间 : DATETIME
+  }
+
+  entity "第三方数据库" as third_party_database {
+    * 第三方ID : INT [PK]
+    --
+    用户ID : INT [FK]
+    第三方名称 : VARCHAR
+    第三方数据 : JSON
+    认证时间 : DATETIME
+  }
+}
+
+@enduml

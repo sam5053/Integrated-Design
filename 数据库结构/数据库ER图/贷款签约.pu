@@ -1,0 +1,26 @@
+@startuml 贷款签约
+
+package "贷款签约" {
+  
+    entity "贷款合同" as loan_contract {
+    * 合同ID : INT [PK]
+    --
+    申请ID : INT [FK]
+    用户ID : INT [FK]
+    合同编号 : VARCHAR
+    签约状态 : ENUM('待签约', '已签约', '已取消')
+    签约时间 : DATETIME
+  }
+
+    entity "电子签名" as electronic_signature {
+    * 签名ID : INT [PK]
+    --
+    合同ID : INT [FK]
+    用户ID : INT [FK]
+    签名图片 : BLOB
+    签名时间 : DATETIME
+  } 
+
+}
+
+@enduml

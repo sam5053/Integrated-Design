@@ -1,0 +1,42 @@
+@startuml 放款
+
+package "放款" {
+
+    entity "支付记录" as payment_record {
+    * 支付ID : INT [PK]
+    --
+    用户ID : INT [FK]
+    单号 : VARCHAR
+    支付金额 : DECIMAL
+    支付时间 : DATETIME
+    支付状态 : ENUM('待支付', '已支付', '支付失败')
+  }
+
+    entity "放款记录" as disbursement_record {
+    * 放款ID : INT [PK]
+    --
+    申请ID : INT [FK]
+    用户ID : INT [FK]
+    合同ID : INT [FK]
+    支付ID : INT [FK]
+    交易流水号 : VARCHAR
+    放款金额 : DECIMAL
+    放款时间 : DATETIME
+    放款状态 : ENUM('待放款', '已放款', '放款失败')
+  }
+
+    entity "还款计划" as repayment_plan {
+    * 计划ID : INT [PK]
+    --
+    放款ID : INT [FK]
+    用户ID : INT [FK]
+    还款金额 : DECIMAL
+    还款期限 : INT
+    还款方式 : ENUM('等额本息', '等额本金', '提前还款')
+    还款状态 : ENUM('未还款', '部分还款', '已还清')
+    计划生成时间 : DATETIME
+  } 
+
+}
+
+@enduml

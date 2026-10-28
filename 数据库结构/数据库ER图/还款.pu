@@ -1,0 +1,38 @@
+@startuml 还款
+
+package "还款" {
+    entity "收款记录" as collection_record {
+    * 收款ID : INT [PK]
+    --
+    用户ID : INT [FK]
+    单号 : INT
+    收款金额 : DECIMAL
+    收款时间 : DATETIME
+    收款状态 : ENUM('待收款', '已收款', '收款失败')
+  }
+
+    entity "还款记录" as repayment_record {
+    * 还款ID : INT [PK]
+    --
+    计划ID : INT [FK]
+    用户ID : INT [FK]
+    收款ID : INT [FK]
+    还款期数 : INT
+    还款金额 : DECIMAL
+    还款时间 : DATETIME
+    还款状态 : ENUM('未还款', '部分还款', '已还清')
+  }
+
+    entity "还款计划完成情况" as repayment_plan_completion {
+    * 完成情况ID : INT [PK]
+    --
+    计划ID : INT [FK]
+    用户ID : INT [FK]
+    还款期数 : INT
+    已完成期数 : INT
+    完成时间 : DATETIME
+    完成状态 : ENUM('未完成', '部分完成', '已完成')
+  }
+}
+
+@enduml

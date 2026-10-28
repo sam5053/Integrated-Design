@@ -1,0 +1,37 @@
+@startuml 风险评估
+
+package "风险评估" {
+  
+    entity "模型风险评估" as risk_assessment {
+    * 模型评估ID : INT [PK]
+    --
+    用户ID : INT [FK]
+    申请ID : INT [FK]
+    模型版本 : VARCHAR
+    风险等级 : ENUM('低风险', '中风险', '高风险')
+    评估时间 : DATETIME
+  }
+
+    entity "模型评估报告" as assessment_report {
+    * 报告ID : INT [PK]
+    --
+    模型评估ID : INT [FK]
+    报告内容 : TEXT
+    生成时间 : DATETIME
+  }
+
+    entity "人工评估" as manual_assessment {
+    * 人工评估ID : INT [PK]
+    --
+    模型评估ID : INT [FK]
+    申请ID : INT [FK]
+    用户ID : INT [FK]
+    评估结果 : ENUM('通过', '拒绝')
+    评估意见 : TEXT
+    评估时间 : DATETIME
+    }
+
+
+}
+
+@enduml

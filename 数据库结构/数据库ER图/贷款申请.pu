@@ -1,0 +1,27 @@
+@startuml 贷款申请
+
+package "贷款申请" {
+  
+    entity "贷款申请" as loan_application {
+    * 申请ID : INT [PK]
+    --
+    用户ID : INT [FK]
+    贷款金额 : DECIMAL
+    贷款期限 : INT
+    贷款用途 : VARCHAR
+    申请状态 : ENUM('待审核', '审核中', '已通过', '已拒绝')
+    提交时间 : DATETIME
+  }
+
+    entity "申请材料" as application_materials {
+    * 材料ID : INT [PK]
+    --
+    申请ID : INT [FK]
+    材料类型 : VARCHAR
+    材料内容 : TEXT
+    提交时间 : DATETIME
+  } 
+
+}
+
+@enduml
