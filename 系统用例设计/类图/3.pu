@@ -1,0 +1,93 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+
+title 3.3.3 支撑与外部服务类 - 架构类图
+
+' ==========================================
+' 核心公共组件（统一返回结果）
+' ==========================================
+class CommonResult<T> {
+  + success: Boolean
+  + errorCode: String
+  + errorMsg: String
+  + data: T
+}
+note bottom of CommonResult
+  统一封装超时、业务错误和技术错误，
+  供应用服务统一判断处理。
+end note
+
+' ==========================================
+' 1. 外部服务适配器 (Adapters)
+' ==========================================
+package "外部服务适配器 (External Adapters)" {
+    
+    interface IdentityProviderAdapter {
+        + verifyIdentity(name: String, idCard: String): CommonResult<Boolean>
+    }
+    note right of IdentityProviderAdapter: 封装实名核验
+
+    interface PaymentGatewayAdapter {
+        + createOrder(orderId: String, amount: Double): CommonResult<PayInfo>
+        + verifySign(data: String, sign: String): CommonResult<Boolean>
+        + queryOrder(orderId: String): CommonResult<OrderStatus>
+        + reconcile(file: File): CommonResult<Void>
+    }
+    note right of PaymentGatewayAdapter: 封装下单、验签、查单和对账
+
+    interface NotificationAdapter {
+        + sendMessage(userId: String, content: String, channel: String): CommonResult<Void>
+    }
+    note right of NotificationAdapter: 封装站内消息与短信通道
+
+    interface ObjectStorageAdapter {
+        + upload(file: File): CommonResult<String>
+        + download(fileId: String): CommonResult<File>
+    }
+    note right of ObjectStorageAdapter: 封装合同附件上传与受控下载
+}
+
+' ==========================================
+' 2. 内部支撑服务 (Support Services)
+' ==========================================
+package "内部支撑服务 (Support Services)" {
+
+    interface AuditService {
+        + record(operatorId: String, action: String, target: String, summary: String): void
+    }
+    note right of AuditService
+      记录关键操作与配置变化。
+      注意：仅保留必要标识和摘要。
+    end note
+
+    interface PermissionService {
+        + checkPermission(userId: String, role: String, dataScope: String): Boolean
+    }
+    note right of PermissionService: 同时检查角色和数据范围
+
+    interface CryptoService {
+        + encrypt(plainText: String, keyRef: String): String
+        + decrypt(cipherText: String, keyRef: String): String
+    }
+    note right of CryptoService
+      处理敏感字段与密钥引用。
+      注意：日志不记录密码、证件、银行卡等。
+    end note
+
+    interface TaskScheduler {
+        + triggerTask(taskId: String, runTime: Date, params: Map): CommonResult<Void>
+    }
+    note right of TaskScheduler: 负责可补跑任务
+}
+
+' ==========================================
+' 关系连线（所有适配器依赖 CommonResult）
+' ==========================================
+IdentityProviderAdapter ..> CommonResult : 返回 >
+PaymentGatewayAdapter ..> CommonResult : 返回 >
+NotificationAdapter ..> CommonResult : 返回 >
+ObjectStorageAdapter ..> CommonResult : 返回 >
+TaskScheduler ..> CommonResult : 返回 >
+
+@enduml
