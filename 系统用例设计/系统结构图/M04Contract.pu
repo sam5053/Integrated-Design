@@ -1,0 +1,22 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 18
+skinparam rectangleBackgroundColor #FFFFFF
+skinparam rectangleBorderColor #222222
+skinparam ArrowColor #333333
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam padding 12
+skinparam nodesep 30
+skinparam ranksep 40
+top to bottom direction
+rectangle "M04 贷款合同与放款" as root
+rectangle "M04-01\n生成贷款合同" as f1
+root -- f1
+rectangle "M04-02\n签订贷款合同" as f2
+root -- f2
+rectangle "M04-03\n放款" as f3
+root -- f3
+@enduml

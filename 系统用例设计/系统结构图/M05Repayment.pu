@@ -1,0 +1,24 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 18
+skinparam rectangleBackgroundColor #FFFFFF
+skinparam rectangleBorderColor #222222
+skinparam ArrowColor #333333
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam padding 12
+skinparam nodesep 30
+skinparam ranksep 40
+top to bottom direction
+rectangle "M05 还款管理" as root
+rectangle "M05-01\n生成还款计划" as f1
+root -- f1
+rectangle "M05-02\n还款进度查询" as f2
+root -- f2
+rectangle "M05-03\n正常还款" as f3
+root -- f3
+rectangle "M05-04\n提前还款（扩展）" as f4
+root -- f4
+@enduml

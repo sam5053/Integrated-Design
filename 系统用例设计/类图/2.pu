@@ -1,45 +1,77 @@
 @startuml
+!pragma layout smetana
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 17
+skinparam classFontSize 18
+skinparam classAttributeFontSize 16
 skinparam classAttributeIconSize 0
-\
-interface DataSourceAdapter {
-  + collect(userId: String, purpose: String, auth: AuthInfo, timeWindow: TimeWindow): DataSourceResult
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam padding 8
+skinparam nodesep 35
+skinparam ranksep 45
+skinparam ArrowColor #444444
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #444444
+skinparam classHeaderBackgroundColor #F0F0F0
+
+class "UserAccount\n账户" as U {
+  userId: int
+  username: String
+  passwordHash: String
+  role: Role
 }
-note bottom of DataSourceAdapter
-  职责：封装用户填报、内部记录和第三方来源，
-  输出来源及采集状态。
-end note
-
-interface FusionService {
-  + fuse(records: List<Record>, policyVersion: String): FeatureSnapshot
+class "UserIdentity\n实名身份" as I {
+  identityId: int
+  name: String
+  verifyStatus: String
 }
-note bottom of FusionService
-  职责：统一字段、判定冲突、记录血缘与质量。
-end note
-
-
-class FeatureSnapshot {
-  - fusedData: Map<String, Object>
-  - timeAnchor: Date
-  - featureVersion: String
-  - missingFlags: List<String>
-  - conflictFlags: List<String>
+class "UserBankCard\n银行卡" as B {
+  cardId: int
+  cardNumber: String
+  bankName: String
 }
-note bottom of FeatureSnapshot
-  职责：不可变评估输入；绑定申请版本。
-end note
-
-
-interface RiskAssessmentService {
-  + assess(modelResult: ModelResult, ruleResult: RuleResult, qualityMark: QualityMark): RiskAssessment
+class "ThirdPartyData\n第三方数据" as T {
+  thirdPartyId: int
+  sourceName: String
+  data: JSON
 }
-note bottom of RiskAssessmentService
-  职责：形成可解释风险依据，质量不足则生成待复核状态。
-end note
-
-
-DataSourceAdapter ..> DataSourceResult : 输出 >
-FusionService ..> FeatureSnapshot : 输出 >
-FeatureSnapshot ..> RiskAssessmentService : 作为输入 >
-RiskAssessmentService ..> RiskAssessment : 输出 >
-
+class "LoanApplication\n贷款申请" as L {
+  applicationId: int
+  amount: BigDecimal
+  term: int
+  status: ApplicationStatus
+}
+class "ApplicationMaterial\n申请材料" as M {
+  materialId: int
+  materialType: String
+  content: String
+}
+class "RiskAssessment\n模型风险评估" as R {
+  assessmentId: int
+  modelVersion: String
+  riskLevel: RiskLevel
+}
+class "AssessmentReport\n模型评估报告" as A {
+  reportId: int
+  content: String
+}
+class "ManualAssessment\n人工评估" as V {
+  manualAssessmentId: int
+  result: ReviewResult
+  opinion: String
+}
+U "1" -- "0..1" I
+U "1" -- "0..*" B
+U "1" -- "0..*" T
+U "1" -- "0..*" L
+L "1" -- "0..*" M
+L "1" -- "0..*" R
+R "1" -- "1..*" A
+R "1" -- "0..1" V
+I -[hidden]right- B
+B -[hidden]right- T
+M -[hidden]right- R
+A -[hidden]right- V
 @enduml

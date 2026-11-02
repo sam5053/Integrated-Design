@@ -1,0 +1,22 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 18
+skinparam rectangleBackgroundColor #FFFFFF
+skinparam rectangleBorderColor #222222
+skinparam ArrowColor #333333
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam padding 12
+skinparam nodesep 30
+skinparam ranksep 40
+top to bottom direction
+rectangle "M01 账户与身份管理" as root
+rectangle "M01-01\n注册账户" as f1
+root -- f1
+rectangle "M01-02\n登录与\n身份分流" as f2
+root -- f2
+rectangle "M01-03\n实名认证与\n银行卡绑定" as f3
+root -- f3
+@enduml

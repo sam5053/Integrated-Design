@@ -1,0 +1,24 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 18
+skinparam rectangleBackgroundColor #FFFFFF
+skinparam rectangleBorderColor #222222
+skinparam ArrowColor #333333
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam padding 12
+skinparam nodesep 30
+skinparam ranksep 40
+top to bottom direction
+rectangle "M03 风险评估与人工审核" as root
+rectangle "M03-01\n估算贷款风险" as f1
+root -- f1
+rectangle "M03-02\n查询贷款人信息" as f2
+root -- f2
+rectangle "M03-03\n待审核贷款\n人工审批" as f3
+root -- f3
+rectangle "M03-04\n查询审核记录" as f4
+root -- f4
+@enduml

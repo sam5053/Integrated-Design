@@ -1,0 +1,53 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 17
+skinparam classFontSize 18
+skinparam classAttributeFontSize 16
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam padding 8
+skinparam nodesep 35
+skinparam ranksep 45
+skinparam ArrowColor #444444
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #444444
+skinparam classHeaderBackgroundColor #F0F0F0
+
+class "DisbursementRecord\n放款记录" as D {
+  disbursementId: int
+  amount: BigDecimal
+  status: String
+}
+class "RepaymentPlan\n还款计划" as L {
+  planId: int
+  amount: BigDecimal
+  term: int
+  status: String
+}
+class "CollectionRecord\n收款记录" as K {
+  collectionId: int
+  number: String
+  amount: BigDecimal
+  status: String
+}
+class "RepaymentRecord\n还款记录" as R {
+  repaymentId: int
+  periodNumber: int
+  amount: BigDecimal
+  status: String
+}
+class "RepaymentPlanCompletion\n计划完成情况" as F {
+  completionId: int
+  totalPeriods: int
+  completedPeriods: int
+  status: String
+}
+D "1" -right- "0..*" L
+L "1" -down- "0..*" R
+L "1" -right- "1" F
+K "1" -left- "0..*" R
+D -[hidden]down- K
+@enduml

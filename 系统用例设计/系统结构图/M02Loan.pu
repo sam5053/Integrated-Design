@@ -1,0 +1,20 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 18
+skinparam rectangleBackgroundColor #FFFFFF
+skinparam rectangleBorderColor #222222
+skinparam ArrowColor #333333
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam padding 12
+skinparam nodesep 30
+skinparam ranksep 40
+top to bottom direction
+rectangle "M02 贷款申请与进度查询" as root
+rectangle "M02-01\n申请贷款" as f1
+root -- f1
+rectangle "M02-02\n查看贷款进度" as f2
+root -- f2
+@enduml

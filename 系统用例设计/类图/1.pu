@@ -1,0 +1,60 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 17
+skinparam classFontSize 18
+skinparam classAttributeFontSize 16
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam padding 8
+skinparam nodesep 35
+skinparam ranksep 45
+skinparam ArrowColor #444444
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #444444
+skinparam classHeaderBackgroundColor #F0F0F0
+
+class "UserService\n账户与身份管理" as U {
+  + registerAccount()
+  + login()
+  + verifyIdentity()
+  + bindBankCard()
+}
+class "LoanService\n贷款申请与进度查询" as L {
+  + submitApplication()
+  + getApplication()
+  + getProgress()
+}
+class "RiskReviewService\n风险评估与人工审核" as R {
+  + getBorrowerInfo()
+  + collectRiskData()
+  + evaluateRisk()
+  + submitReview()
+  + listReviewRecords()
+}
+class "ContractService\n贷款合同与放款" as C {
+  + generateContract()
+  + signContract()
+  + disburse()
+}
+class "RepaymentService\n还款管理" as P {
+  + createPlan()
+  + repay()
+  + getProgress()
+  + earlyRepay()
+}
+class "HelpService\n帮助与贷款规则" as H {
+  + getUserGuide()
+  + getLoanRules()
+  + getHotline()
+}
+L ..> U : 检查实名
+R ..> L : 读取申请并保存审批状态
+C ..> R : 检查审核通过
+C ..> P : 放款成功后生成计划
+U -[hidden]right- L
+R -[hidden]right- C
+P -[hidden]right- H
+@enduml

@@ -1,0 +1,28 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 18
+skinparam rectangleBackgroundColor #FFFFFF
+skinparam rectangleBorderColor #222222
+skinparam ArrowColor #333333
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam padding 12
+skinparam nodesep 30
+skinparam ranksep 40
+left to right direction
+rectangle "多数据源融合的互联网\n个人贷款风控系统" as root
+rectangle "M01 账户与身份管理" as M01
+root -- M01
+rectangle "M02 贷款申请与进度查询" as M02
+root -- M02
+rectangle "M03 风险评估与人工审核" as M03
+root -- M03
+rectangle "M04 贷款合同与放款" as M04
+root -- M04
+rectangle "M05 还款管理" as M05
+root -- M05
+rectangle "M06 帮助与贷款规则" as M06
+root -- M06
+@enduml
