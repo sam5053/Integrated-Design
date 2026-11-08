@@ -1,0 +1,106 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-03 实名认证与银行卡绑定顺序图
+
+actor "个人贷款用户" as A
+boundary "实名认证页面" as UI
+control "C01 身份与访问\n实名与银行卡管理" as S
+control "C11 平台支撑\n鉴权及实名模拟适配" as P
+database "实名、授权与银行卡\nC01自有数据" as D
+control "C10 流程协同" as C
+
+A -> UI : 填写姓名、证件号与银行卡
+UI --> A : 展示采集用途与必要授权
+A -> UI : 确认授权并提交
+UI -> P : authenticateRequest(Token)
+P --> UI : 可信userId或拒绝
+break 会话无效或用户未同意必要授权
+    UI --> A : 引导重新登录或停止认证
+end
+UI -> S : verifyIdentity(本人资料、授权确认)
+S -> P : checkObjectAccess(用户、本人账户)
+P --> S : 本人范围校验结果
+break 无权访问账户
+    S --> UI : 拒绝认证并记录审计
+end
+S -> D : 检查证件是否已绑定其他有效账户
+D --> S : 证件唯一性结果
+break 证件已被其他账户认证
+    S --> UI : 拒绝绑定，提示身份冲突
+end
+S -> P : invokeExternal(姓名证件一致性核验)
+P --> S : 通过、失败或未知
+break 实名失败或核验超时
+    S -> D : 保存失败或待确认结果，不提升实名权限
+    S --> UI : 返回原因；待确认时允许查询或重试
+    UI --> A : 修正资料或稍后重试
+end
+S -> D : 保存实名状态、认证时间与授权记录
+D --> S : 已保存
+loop 对每一张用户主动提交的银行卡
+    S -> S : bindBankCard(本人、卡号、银行)
+    S -> P : invokeExternal(银行卡归属校验)
+    P --> S : 属于本人、失败或未知
+    alt 属于本人且未重复绑定
+        S -> D : 保存银行卡；基本版以最早绑定卡为默认卡
+        D --> S : 银行卡受控摘要
+    else 非本人、重复或结果未知
+        S --> UI : 返回该卡校验结果，不创建无效绑定
+    end
+end
+S ->> C : UserVerified(userId、identityVersion、eventId)
+S -> P : 记录认证和绑卡结果，脱敏输出
+S --> UI : 已实名状态、各卡结果与默认卡摘要
+UI --> A : 展示认证结果；无有效卡时提示继续绑卡
+note over S,D
+实名认证与银行卡绑定分别保留确认结果。
+未绑定有效默认卡时，后续放款仍须拒绝。
+end note
+
+footer 依据：需求5.1 UC-03  |  部件详细设计 3.2至3.4、14.3
+@enduml

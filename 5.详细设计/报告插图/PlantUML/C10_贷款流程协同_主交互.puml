@@ -1,0 +1,51 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+control "C02\n申请确认" as L
+control "C10\n流程协同" as S
+control "业务部件\nC03至C07" as B
+control "进度消费者\nC02及C08" as Q
+
+
+L -> S : startLoanProcess(申请号、版本)
+S -> B : 发起当前阶段命令
+B --> S : 受理或阶段确认事件
+alt 阶段已确认完成
+ S -> S : advanceStage\n检查版本及前置事实
+ S -> Q : publishProgress(统一阶段事件)
+ S -> B : 发起下一阶段合法命令
+else 失败或结果未知
+ S -> S : 留在当前阶段\n按原业务单号retryStage
+end
+note over S,Q : C10不直接修改申请、合同或账务表。
+
+@enduml

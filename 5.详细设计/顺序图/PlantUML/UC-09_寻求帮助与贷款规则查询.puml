@@ -1,0 +1,103 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-09 寻求帮助与贷款规则查询顺序图
+
+actor "匿名或已登录用户" as A
+boundary "帮助与规则页面" as UI
+control "C09 客户服务\n帮助、规则与联系入口" as S
+control "C11 平台支撑\n配置与受控文件" as P
+database "版本化静态文件\n非核心贷款数据" as D
+participant "人工或AI客服渠道\n扩展能力" as E
+
+A -> UI : 打开帮助中心
+UI -> S : queryHelpInfo(主题)
+S -> P : readConfig(帮助内容与入口配置)
+P -> D : 读取当前有效内容与服务配置
+D --> P : 常见问题、规则版本、热线与服务时段
+P --> S : 内容或明确读取错误
+alt 帮助内容读取成功
+    S --> UI : 聚合帮助信息与咨询入口
+    UI --> A : 展示常见问题、人工/AI入口与热线
+else 某项内容读取失败
+    S --> UI : 返回可用内容和对应错误提示
+    UI --> A : 提示刷新或使用可用联系方式
+end
+A -> UI : 选择用户须知或平台贷款规则
+alt 查看用户须知
+    UI -> S : queryUserGuide(当前有效版本或指定版本)
+else 查看平台贷款规则
+    UI -> S : queryLoanRules(当前有效版本或指定版本)
+end
+S -> P : 读取指定版本文档
+P -> D : 按版本查询，不覆盖历史文本
+D --> P : 全文、版本号与生效日期
+P --> S : 文档读取结果
+S --> UI : 版本化规则全文
+UI --> A : 在线查阅，显示版本及生效日期
+A -> UI : 选择咨询方式
+UI -> S : queryContactInfo()
+S -> P : readConfig(客服入口、时段、启用状态)
+P --> S : 服务入口配置
+S --> UI : 热线、时段、AI及转人工说明
+alt 基本版未接入实时客服
+    UI --> A : 展示入口说明与热线，不创建虚构会话
+else 已配置客服扩展
+    UI -> E : 发起用户所选的咨询
+    E --> UI : 答复、排队状态或暂不可用
+    opt AI无法解答或人工不在服务时段
+        UI --> A : 提供转人工、留言说明或热线
+    end
+    note over UI,E
+咨询历史、留言与会话恢复需要新增C09专用实体。
+只有扩展实现后才可展示真实历史记录。
+end note
+end
+note over S,D : C09读取帮助配置，不查询核心贷款数据，也不修改贷款状态。
+
+footer 依据：需求3.1.7及系统用例描述UC-09  |  部件详细设计 11.2至11.4、13.2
+@enduml

@@ -1,0 +1,110 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-12 查询审核记录顺序图
+
+actor "风控审核人员" as A
+boundary "审核记录页面" as UI
+control "C11 平台支撑\n访问控制、脱敏与审计" as P
+control "C04 人工审批\nReviewRecordService" as S
+database "C04只读审核视图\nReviewHistoryMapper" as D
+control "C08 贷款监察" as M
+
+A -> UI : 设置时间、处理人、结论与申请号等条件
+UI -> P : authenticateRequest并校验审核记录查询权限
+P --> UI : 审核员上下文或拒绝
+break 未登录或查询权限不足
+    UI --> A : 拒绝查询并记录访问结果
+end
+UI -> S : queryReviewRecords(条件、分页、访问范围)
+S -> S : 校验筛选条件，限定审核员可见范围
+S -> D : 分页读取授权范围内的审核历史
+D --> S : 记录、总条数与申请引用
+S -> P : 对借款人信息与列表字段执行脱敏
+P --> S : 申请号、额度、风险、结论、意见与时间
+S -> P : 记录查询行为与条件摘要
+S --> UI : 分页结果或空列表
+alt 无匹配记录
+    UI --> A : 提示调整查询条件
+else 有审核记录
+    UI --> A : 展示历史审核列表
+    A -> UI : 查看单笔申请完整操作链路
+    UI -> S : 查询审核详情（申请号）
+    S -> P : checkObjectAccess(审核员、申请)
+    P --> S : 允许或拒绝
+    break 无该申请详情权限
+        S --> UI : 拒绝详情访问
+    end
+    S -> D : 读取只追加的审批历史与修订记录
+    D --> S : 处理人、时间、结论与意见
+    S -> M : queryLoanTimeline(applicationId、授权范围)
+    M --> S : 已确认阶段与业务日志摘要
+    S --> UI : 按时间关联的审核与业务链路
+    UI --> A : 展示完整操作过程
+end
+opt 请求导出查询结果
+    A -> UI : 选择导出
+    UI -> P : 校验独立导出权限与数据范围
+    alt 无导出权限
+        P --> UI : 拒绝导出并记录审计
+    else 允许导出
+        P --> UI : 已授权的导出范围
+        UI -> S : 导出当前授权查询结果
+        S -> D : 按同一范围读取待导出记录
+        D --> S : 脱敏所需数据
+        S -> P : 生成受控、完整的脱敏文件并记录导出行为
+        alt 文件生成成功
+            P --> UI : 返回受控下载结果
+        else 导出失败
+            P --> UI : 提示重试，不发布不完整文件
+        end
+    end
+end
+note over S,D : 审核业务记录只读；查询或导出不会修改和删除审批历史。
+
+footer 依据：需求5.1原编号UC-11、3.1.10  |  部件详细设计 6.2至6.4、10.3、13.2
+@enduml

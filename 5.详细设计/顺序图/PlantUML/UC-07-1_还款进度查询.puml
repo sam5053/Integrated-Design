@@ -1,0 +1,100 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-07-1 还款进度查询顺序图
+
+actor "个人贷款用户" as A
+boundary "还款进度与账单页面" as UI
+control "C11 平台支撑\n访问控制与审计" as P
+control "C07 还款与结清\nRepaymentProgressService" as S
+database "计划、还款与完成情况\nC07自有表" as D
+
+A -> UI : 打开还款进度，设置账单筛选与分页
+UI -> P : authenticateRequest(Token)
+P --> UI : 可信userId或拒绝
+break 会话过期
+    UI --> A : 提示重新登录
+end
+UI -> S : queryRepaymentProgress(userId、planId)
+S -> P : checkObjectAccess(本人、还款计划)
+P --> S : 允许或拒绝
+break 无本人计划访问权限
+    S --> UI : 拒绝查询并记录审计
+end
+S -> D : 读取计划、完成情况、成功还款与处理中收款
+D --> S : 计划快照、金额、期数、日期与交易状态
+alt 没有有效还款计划
+    S --> UI : 无计划或放款尚未完成
+    UI --> A : 显示当前业务状态与贷款进度入口
+else 存在有效计划
+    activate S
+    S -> S : 汇总应还、已还和剩余金额\n完成期数不超过总期数，处理中不计已还
+    S -> D : 按筛选条件分页读取账单与历史还款
+    D --> S : 明细与总条数
+    alt 明细与已确认收款一致
+        S --> UI : 进度、应还日、本金利息费用和历史记录
+        UI --> A : 展示按期账单及还款完成比例
+    else 流水与账单暂不一致
+        S --> UI : 最近确认结果、更新时间与处理中说明
+        UI --> A : 提示稍后刷新或联系客服
+    end
+    opt 临近还款日或已经逾期
+        UI --> A : 展示到期提醒或逾期提示
+    end
+    opt 贷款已确认结清
+        UI --> A : 显示已结清与后续办理说明入口
+    end
+    S -> P : 记录查询摘要，敏感卡号掩码展示
+    deactivate S
+end
+note over S,D
+本查询不执行支付、不累计还款、不修改贷款状态。
+分期、利息和费用明细按已确认规则展示，当前ER缺项见索引。
+end note
+
+footer 依据：需求4.2贷中用例图、3.1.6  |  部件详细设计 9.2至9.4
+@enduml

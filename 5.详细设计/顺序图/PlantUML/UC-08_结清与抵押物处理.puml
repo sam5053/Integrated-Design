@@ -1,0 +1,103 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-08 结清与抵押物处理顺序图
+
+actor "个人贷款用户" as A
+boundary "还款与结清页面" as UI
+control "C10 流程协同" as C
+control "C07 还款与结清\nSettlementService" as S
+database "还款与完成情况\nC07自有表" as D
+control "C09 客户服务" as H
+actor "有权限业务人员" as B
+
+ref over UI,S : C11鉴权前置：本人查询与业务人员权限分别校验
+C -> S : 转交最后一期RepaymentPosted确认事件
+S -> S : inspectSettlement(planId)
+S -> D : 核对全部有效账单、计划完成情况及待确认收款
+D --> S : 应还、已还、剩余、完成期数与处理中交易
+alt 未全部清偿或仍有待确认交易
+    S --> C : 尚未结清或仍有待确认交易，停止阶段推进
+else 已清偿且不存在待确认交易
+    activate S
+    S -> S : 判定账务一致，检查是否已处理结清
+    S -> D : 事务固化计划结清与完成情况\n重复处理返回既有结果
+    alt 结清保存失败
+        D --> S : 回滚，保持原确认状态
+        S --> C : 返回待重试，暂不发布贷款完成
+    else 结清保存成功
+        D --> S : 已确认结清结果
+        S ->> C : LoanSettled(planId、applicationId、eventId)
+        C -> C : publishProgress(贷款完成的确认事实)
+        ref over C,S : C10调用C02.buildProgressEvent更新只读进度\n确认事实同时交C08记录，C10不修改账务
+        S ->> H : LoanSettled（用于结清提示）
+        S --> C : 返回已确认结清状态与完成时间
+    end
+    deactivate S
+end
+A -> UI : 主动打开结清状态
+UI -> S : inspectSettlement(planId)，本人只读查询
+S -> D : 读取结清结果及待确认收款状态
+D --> S : 当前已确认结果
+S --> UI : 结清与否、完成时间或未完成原因
+UI --> A : 展示贷款完成、剩余应还或处理中提示
+opt 贷款涉及抵押凭证、抵押物或需结清证明
+    A -> UI : 查看后续办理说明
+    UI -> H : queryHelpInfo(结清办理主题)
+    H --> UI : 规则说明、所需材料提示与联系方式
+    UI --> A : 提示联系授权业务人员办理
+    B -> H : queryHelpInfo(结清办理主题)
+    H --> B : 展示现有说明；未确定流程明确提示待完善
+    note over H,B
+当前基本版只提供状态与办理提示。
+抵押物手续、材料清单、结清证明实体及归档端口尚未确定；
+本图不假定已有自动处置或凭证归档功能。
+end note
+end
+
+footer 依据：需求3.1.6及系统用例描述UC-08  |  部件详细设计 9.3至9.4、11.4、14.3
+@enduml

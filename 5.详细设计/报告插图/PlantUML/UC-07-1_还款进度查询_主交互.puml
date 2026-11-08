@@ -1,0 +1,51 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "贷款人\n还款进度页" as A
+control "C07\n进度服务" as S
+control "C11\n权限与审计" as P
+database "计划、收款\n与完成情况" as D
+
+
+A -> S : 查询本人计划及明细
+S -> P : 校验Token与计划归属
+S -> D : 读取计划、成功还款\n和处理中交易
+D --> S : 金额、日期与期数
+S -> S : 仅汇总成功入账\n处理中不算已还
+S -> D : 按条件分页读取明细
+D --> S : 明细与总条数
+S --> A : 应还、剩余及还款进度
+opt 临近到期或逾期
+ S --> A : 展示提醒与最近更新时间
+end
+
+@enduml

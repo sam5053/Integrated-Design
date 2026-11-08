@@ -1,0 +1,120 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title 内部-02 贷款发放与还款计划生成顺序图
+
+control "C10 流程协同\n或授权演示入口" as C
+control "C06 放款\n支付执行与结果确认" as S
+control "C05 合同签约" as K
+control "C01 身份与访问" as I
+control "C11 平台支撑\n支付模拟适配" as P
+database "共享数据库\nC06与C07各写自有表" as D
+control "C07 还款与结清" as R
+control "C08 贷款监察" as M
+
+C -> S : requestDisbursement(contractId)
+S -> K : queryContract(contractId)，取得已签约快照
+K --> S : 合同状态、本人、金额、期限与版本
+S -> I : resolveDefaultCard(userId)
+I --> S : 默认卡标识与受控摘要
+S -> S : 校验已签约、身份归属、金额和有效默认卡
+break 未签约、版本无效或无有效收款卡
+    S --> C : 拒绝放款，不创建成功支付或还款计划
+end
+S -> D : 查询同合同成功放款与处理中支付单
+D --> S : 既有结果或可受理
+break 同合同已成功放款或已有处理中交易
+    S --> C : 返回原交易；成功但缺计划时只恢复建计划
+end
+S -> D : 生成唯一paymentNumber\n保存payment_record为处理中
+D --> S : 原支付单
+S -> P : invokeExternal(模拟放款、原单号、金额、默认卡)
+P --> S : 成功、失败或未知及交易号
+S -> S : confirmDisbursement(原单号、校验后的结果)\n核对回执或模拟结果、金额与业务归属
+alt 已确认放款成功
+    activate S
+    S -> D : 事务确认payment_record\n保存唯一disbursement_record
+    alt 本地确认失败
+        D --> S : 回滚，返回待核对状态
+        S --> C : 原单结果待恢复，不重新付款
+    else 放款事实已保存
+        D --> S : disbursementId
+        S -> M : recordConfirmedEvent(DisbursementConfirmed)
+        S -> R : createPlan(disbursementId、金额、期限、方式)
+        R -> D : 按disbursementId幂等保存还款计划\n初始化repayment_plan_completion
+        alt 计划创建成功或已存在
+            D --> R : planId
+            R --> S : 已激活计划
+            S --> C : 放款已确认、计划可查询
+        else 计划创建失败
+            D --> R : 回滚计划保存
+            R --> S : 需要恢复建计划
+            S --> C : 保留成功放款事实，安排仅重试createPlan
+        end
+    end
+    deactivate S
+else 明确支付失败
+    S -> D : 保存支付失败，不创建成功放款或有效计划
+    S --> C : 返回失败原因，保留已批准及已签约事实
+else 超时、回执不可信或结果未知
+    S -> D : 保留处理中或待核对，不展示成功
+    S --> C : 返回待确认
+    loop 按恢复策略查询原支付单，直到明确或转人工
+        C -> C : retryStage(原放款阶段与原支付单)
+        C -> S : 恢复原支付单确认（沿用paymentNumber）
+        S -> P : invokeExternal(查询原放款单状态)
+        P --> S : 原交易结果
+        S -> S : 确认后复用confirmDisbursement\n仍未知则继续保留待确认
+    end
+end
+note over C,R
+C10仅编排命令；支付结果由C06确认，计划由C07维护。
+重复回执不得重复放款、重复建计划；事件带业务标识、版本和eventId。
+end note
+
+footer 依据：需求3.1.4、5.2.1  |  部件详细设计 8.2至8.4、9.3、14.3
+@enduml

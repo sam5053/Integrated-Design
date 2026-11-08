@@ -1,0 +1,52 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "贷款人\n结清状态页" as A
+control "C07\n进度与结清" as S
+control "协作端口\nC10及C09" as X
+database "C07\n计划与完成情况" as D
+
+
+X -> S : 最后一期已入账事件
+S -> D : 核对全部账单\n及待确认交易
+alt 已清偿且无在途交易
+ S -> D : 幂等固化计划完成结果
+ S -> X : LoanSettled确认事件
+else 不满足结清条件
+ S -> X : 保留未完成或待确认
+end
+A -> S : inspectSettlement(本人计划)
+S -> D : 只读查询当前结清事实
+S --> A : 展示结清状态与办理提示
+note over A,X : 抵押物手续及结清证明\n基本版只提供办理说明。
+
+@enduml

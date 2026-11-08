@@ -1,0 +1,57 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "审核员\n人工审批页" as A
+control "C04\n人工结论" as S
+control "C02\n申请状态" as L
+control "C05\n合同生成" as K
+
+
+A -> S : 查看当前风险解释\n提交结论、意见与版本
+S -> S : 校验权限、意见\n及申请版本
+alt 批准或拒绝
+ group 同一后端事务
+  S -> S : 追加唯一有效人工结论
+  S -> L : markReviewResult\n按版本更新审批阶段
+  L --> S : 更新结果，冲突则回滚
+ end
+ opt 已批准
+  S -> K : generateContract(批准方案)
+  K --> S : 待签合同或待恢复状态
+ end
+ S --> A : 返回有效审批结果
+else 材料不足
+ S -> L : 退回补件并保留旧版本
+ S --> A : 已退回，等待补件重评
+end
+
+@enduml

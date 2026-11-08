@@ -1,0 +1,53 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "用户\n登录页面" as A
+control "C01\n账户与登录" as S
+control "C11\nToken及限流" as P
+database "C01\n账户数据" as D
+
+
+A -> S : 账号、密码与入口角色
+S -> P : 登录频率与验证码检查
+S -> D : 读取账号与真实角色
+D --> S : 账户状态及密码摘要
+S -> S : 校验密码与角色匹配
+alt 允许登录
+ S -> P : 签发可信角色Token
+ P --> S : 会话Token
+ S --> A : 按角色进入前台或后台
+else 错误、锁定或角色不符
+ S -> P : 记录失败与限制次数
+ S --> A : 拒绝并提示正确入口
+end
+
+@enduml

@@ -1,0 +1,107 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title 内部-01 多数据源融合与风险评估顺序图
+
+control "C10 流程协同\n或C02调用方" as C
+control "C03 风险评估\nRiskAssessmentService" as S
+control "C02 贷款申请与进度" as L
+control "C01 身份与访问" as I
+control "C07 还款与结清" as R
+control "C11 平台支撑\n模型模拟适配" as P
+database "评估与报告\nC03自有表" as D
+control "C08 贷款监察" as M
+
+C -> S : evaluateRisk(applicationId、当前申请版本)
+S -> L : getApplication(applicationId)
+L --> S : 申请快照、材料和版本
+break 传入版本不是当前版本
+    S --> C : 拒绝旧输入，需按新版本重新评估
+end
+S -> I : 查询实名、有效授权与授权范围内的第三方数据
+I --> S : 身份摘要、授权凭证、来源与数据时间
+break 必要授权无效或已撤回
+    S --> C : 停止超范围采集，返回待处理原因
+end
+S -> R : 受控读取本用户历史还款摘要
+R --> S : 历史摘要或无历史记录
+S -> S : RiskDataAssembler清洗、去重、标准化与缺失标记\n绑定申请版本，保留数据来源和时间
+alt 关键字段缺失或来源冲突无法满足模型输入
+    S --> C : 返回数据问题，进入补件或人工核验
+else 输入满足规则
+    S -> P : invokeExternal(指定模型/规则版本、标准化输入)
+    P --> S : 风险等级、评分、原因码、报告或失败/未知
+    S -> S : 校验返回结构、模型版本与解释有效性
+    alt 模型失败、超时或返回无效
+        S --> C : 保留待审核/待恢复，不编造分数或自动结论
+    else 模型返回有效
+        S -> L : getApplication(applicationId)，复核当前版本
+        L --> S : 当前申请版本
+        break 模型调用期间材料已变更
+            S --> C : 结果不作为新版本依据，改用reevaluateRisk
+        end
+        activate S
+        S -> D : 事务追加risk_assessment与assessment_report\n关联用户、申请版本、模型版本和评估时间
+        alt 保存失败
+            D --> S : 整体回滚，不发布评估完成
+            S --> C : 返回待重试
+        else 保存成功
+            D --> S : assessmentId与reportId
+            S -> M : recordConfirmedEvent(RiskAssessmentCompleted)
+            S --> C : 已确认风险结果及申请版本
+            note over C,S : C10推进到人工审核；是否批准仍由C04决定。
+        end
+        deactivate S
+    end
+end
+note over S,D
+重评追加历史，不覆盖原报告。
+原始第三方数据归C01，C03只保存必要输入依据与解释。
+end note
+
+footer 依据：需求5.2.1及UC-04内部评估  |  部件详细设计 5.2至5.4、14.3
+@enduml

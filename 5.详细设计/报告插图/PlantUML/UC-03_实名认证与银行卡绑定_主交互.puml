@@ -1,0 +1,55 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "贷款人\n实名认证页" as A
+control "C01\n实名与银行卡" as S
+control "C11\n实名模拟适配" as P
+database "C01\n身份与银行卡" as D
+
+
+A -> S : 姓名、证件、银行卡\n及必要授权
+S -> S : 校验本人范围\n与证件唯一性
+S -> P : 姓名证件一致性核验
+P --> S : 核验结果
+alt 实名已确认通过
+ S -> D : 保存实名与授权结果
+ loop 逐张银行卡
+  S -> P : 校验本人归属
+  P --> S : 该卡核验结果
+  S -> D : 仅保存有效且不重复的卡
+ end
+ S --> A : 返回实名及默认卡摘要
+else 核验失败或未知
+ S --> A : 保留失败或待确认\n不提升实名权限
+end
+
+@enduml

@@ -1,0 +1,51 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "审核员\n贷款人查询页" as A
+control "C04\n借款人视图" as S
+control "受控查询端口\nC01至C03" as Q
+control "C11\n权限与脱敏" as P
+
+
+A -> S : 输入姓名或证件号
+S -> P : 校验审核角色及查询范围
+S -> Q : 检索贷款人摘要
+Q --> S : 可见的匹配项
+S --> A : 脱敏贷款人列表
+A -> S : queryBorrower(申请号)
+S -> P : 校验该申请访问权限
+S -> Q : 读取实名、材料\n进度与模型解释
+Q --> S : 当前版本审核资料
+S -> P : 字段脱敏并记录查看
+S --> A : 受控借款人视图
+
+@enduml

@@ -1,0 +1,109 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-04 申请贷款顺序图
+
+actor "个人贷款用户" as A
+boundary "贷款申请页面" as UI
+control "C02 贷款申请与进度\nLoanApplicationService" as S
+control "C01 身份与访问" as I
+database "申请与材料\nC02自有表" as D
+control "C10 流程协同" as C
+control "C03 风险评估" as R
+
+ref over UI,S : C11鉴权前置：校验Token与本人范围，失败即返回
+A -> UI : 选择产品，填写额度、期限、用途与材料
+UI -> S : 请求产品规则与贷款试算
+S -> S : 读取LoanRuleConfig并按当前规则试算
+S --> UI : 额度范围、期限、利息与还款节奏
+UI --> A : 展示试算结果与数据用途
+A -> UI : 确认必要授权并提交
+UI -> S : submitApplication(参数、材料、授权、请求号)
+S -> I : queryIdentityStatus(userId)及授权范围查询
+I --> S : 实名状态与有效授权摘要
+break 未实名、账户异常或必要授权无效
+    S --> UI : 拒绝提交，提示先完成实名或授权
+end
+S -> S : 校验必填项、金额范围、期限、材料类型与产品资格
+break 字段、额度或材料不符合规则
+    S --> UI : 返回具体字段错误和可申请范围
+end
+S -> D : 检查幂等请求及未完成的同类申请
+D --> S : 原请求结果、已有申请或可创建
+break 重复请求或存在未完成同类申请
+    S --> UI : 返回原申请号与状态，不重复创建
+end
+activate S
+S -> D : 同一事务保存申请快照、材料版本及试算结果
+alt 保存失败
+    D --> S : 回滚申请与材料
+    S --> UI : 提交失败，可用原请求号重试
+else 保存成功
+    D --> S : applicationId与当前version
+    S --> UI : 提交成功，进入身份资料核验与评估环节
+    UI --> A : 展示申请号和进度入口
+    S ->> C : startLoanProcess(ApplicationSubmitted事件)
+    C -> R : evaluateRisk(applicationId、当前version)
+    ref over C,R : 内部-01 多数据源融合与风险评估
+    alt 评估与报告已确认保存
+        R --> C : assessmentId、申请版本与评估完成事实
+        C -> C : advanceStage(确认事件)，转换进度阶段
+        C -> S : buildProgressEvent(已确认评估结果)
+        S -> D : 更新只读进度投影，不代写模型或审批结论
+    else 模型失败、超时或输入版本失效
+        R --> C : 失败或待重试，不产生成功评估
+        C -> C : 保留当前阶段并安排恢复
+    end
+end
+deactivate S
+note over S,R
+申请提交成功与风险评估成功是不同事实。
+补件时通过supplementMaterials保留旧版本并重新评估。
+end note
+
+footer 依据：需求5.1 UC-04、3.1.3  |  部件详细设计 4.2至4.4、5.3、12.3
+@enduml

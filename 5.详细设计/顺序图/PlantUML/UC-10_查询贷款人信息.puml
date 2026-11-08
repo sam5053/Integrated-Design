@@ -1,0 +1,109 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-10 查询贷款人信息顺序图
+
+actor "风控审核人员" as A
+boundary "贷款人查询页面" as UI
+control "C04 人工审批\nBorrowerInfoService" as S
+control "C11 平台支撑\n访问控制与脱敏" as P
+control "C01 身份与访问" as I
+control "C02 贷款申请与进度" as L
+control "C03 风险评估" as R
+
+A -> UI : 输入姓名或身份证号发起检索
+UI -> P : authenticateRequest并检查REVIEWER与查询权限
+P --> UI : 审核员上下文或拒绝
+break 未登录或无查询权限
+    UI --> A : 拒绝查询，记录访问结果
+end
+UI -> S : 按姓名或证件号检索（审核视图查询）
+break 查询条件为空或格式不正确
+    S --> UI : 提示输入有效姓名或证件号
+end
+S -> I : 受控检索身份摘要（条件、审核员范围）
+I --> S : 匹配的贷款人标识与脱敏摘要
+alt 没有匹配记录
+    S --> UI : 返回空结果
+    UI --> A : 提示调整条件
+else 匹配成功
+    S --> UI : 返回贷款人列表
+    UI --> A : 展示可访问的匹配项
+    A -> UI : 选中贷款人与对应申请
+    UI -> S : queryBorrower(applicationId)
+    S -> P : checkObjectAccess(审核员、申请)
+    P --> S : 允许或拒绝
+    break 无该申请查看权限
+        S --> UI : 拒绝详情访问并记录越权摘要
+    end
+    activate S
+    S -> L : getApplication(applicationId)及受控阶段摘要
+    L --> S : 当前申请版本、材料与业务进度
+    S -> I : queryIdentityStatus(userId)与受控身份摘要
+    I --> S : 实名结果及允许访问的个人信息
+    S -> R : queryRiskResult(applicationId)
+    R --> S : 最新有效模型结果、版本与报告引用
+    S -> R : explainAssessment(assessmentId、REVIEWER)
+    R --> S : 可查看的评分、原因与建议
+    S -> P : 按字段权限脱敏并记录查看行为
+    P --> S : 允许展示的借款人视图
+    S --> UI : 身份、申请材料、模型解释与进度
+    UI --> A : 默认掩码展示敏感字段
+    deactivate S
+    opt 审核员申请查看完整敏感字段
+        UI -> P : 校验字段级权限并记录查看审计
+        alt 已获相应权限
+            P --> UI : 允许本次受控展示
+            ref over UI,I : 经C04受控查询端口返回获准字段\n不得通过前端掩码还原完整敏感信息
+        else 无对应权限
+            P --> UI : 保持隐藏并提示申请权限
+        end
+    end
+end
+
+footer 依据：需求5.1原编号UC-09、3.1.8  |  部件详细设计 6.2至6.4、13.3
+@enduml

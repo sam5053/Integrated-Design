@@ -1,0 +1,55 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "客户端" as A
+control "C11\n访问控制" as S
+control "业务Service" as B
+database "受控文件\n与技术配置" as D
+
+
+A -> S : 携带Token访问受保护入口
+S -> S : authenticateRequest\n解析可信userId与role
+alt Token及角色有效
+ S -> B : 传递可信访问上下文
+ B -> S : checkObjectAccess(对象归属)
+ S --> B : 允许或拒绝
+ opt 允许存取材料或签名
+  B -> S : storeDocument(文件、所有者)
+  S -> D : 校验类型与大小\n保存文件并计算摘要
+  S --> B : 受控引用和摘要
+ end
+ B --> A : 脱敏业务响应
+else 无效或无权限
+ S --> A : 拒绝并记录安全摘要
+end
+
+@enduml

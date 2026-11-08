@@ -1,0 +1,53 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+control "C10\n流程调用方" as C
+control "C06\n放款" as S
+control "协作端口\n合同、银行卡及支付" as X
+control "C07\n还款计划" as R
+
+
+C -> S : requestDisbursement(合同号)
+S -> X : 校验已签约及默认卡
+S -> S : 检查重复，创建唯一支付单
+S -> X : 调用模拟放款
+X --> S : 成功、失败或未知
+alt 已确认成功
+ S -> S : 事务保存支付及放款事实
+ S -> R : createPlan(放款号、金额、期限)
+ R --> S : 有效计划或建计划失败
+ S --> C : 返回确认结果\n失败时仅补建计划
+else 失败或未知
+ S --> C : 不创建有效计划\n未知仅查询原支付单
+end
+
+@enduml

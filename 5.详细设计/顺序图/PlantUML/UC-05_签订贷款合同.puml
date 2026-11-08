@@ -1,0 +1,103 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-05 签订贷款合同顺序图
+
+actor "个人贷款用户" as A
+boundary "电子合同页面" as UI
+control "C05 合同签约\nContractService / SignatureService" as S
+control "C04 人工审批" as R
+control "C11 平台支撑\n访问控制与文件" as P
+database "合同与电子签名\nC05自有表" as D
+control "C10 流程协同" as C
+
+A -> UI : 打开待签合同
+UI -> P : authenticateRequest并校验合同本人范围
+P --> UI : 可信访问上下文或拒绝
+break 会话失效或合同不属于本人
+    UI --> A : 拒绝访问，提示重新登录或无权操作
+end
+UI -> S : queryContract(contractId)
+S -> D : 读取合同全文、条款摘要与版本
+D --> S : 待签合同快照
+S --> UI : 全文、额度、期限、费用与还款条款
+UI --> A : 展示合同全文与关键条款
+A -> UI : 阅读后明确确认
+UI -> S : confirmReading(contractId、合同版本)
+S -> S : 记录与该合同版本绑定的阅读确认
+A -> UI : 提交手写签名或签名图片
+UI -> S : signContract(contractId、版本、签名文件)
+S -> R : issueApprovalDecision(applicationId)
+R --> S : 已批准方案的只读快照
+S -> S : 校验阅读确认、签约状态及版本条款一致性
+break 未阅读、未批准、合同取消或版本不一致
+    S --> UI : 保持待签约或原状态，要求重新确认
+    UI --> A : 显示拒绝原因，不进入放款
+end
+S -> P : storeDocument(签名文件、合同归属)
+P --> S : 文件引用和摘要，或保存失败
+break 签名校验或文件保存失败
+    S --> UI : 签署失败，合同仍为待签约
+end
+activate S
+S -> D : 事务保存唯一有效签名、时间与合同版本\n按原版本将合同更新为已签署
+alt 事务或并发版本校验失败
+    D --> S : 回滚，未形成已签约事实
+    S --> UI : 提示刷新或重试
+else 保存成功
+    D --> S : 已签约合同及签名证据ID
+    S -> P : 记录签署审计摘要
+    S --> UI : 签约成功
+    UI --> A : 显示签署结果与放款进度入口
+    S ->> C : ContractSigned(contractId、version、eventId)
+    C -> C : advanceStage(已确认签约事件)
+    ref over S,C : 内部-02 贷款发放与还款计划生成\nC10仅发起下一阶段命令，不代写合同或放款数据
+end
+deactivate S
+
+footer 依据：需求5.1 UC-05、3.1.4  |  部件详细设计 7.2至7.4、12.3
+@enduml

@@ -1,0 +1,100 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-01 注册账户顺序图
+
+actor "贷款人或审核人员" as A
+boundary "注册页面" as UI
+control "C01 身份与访问\nAccountService" as S
+control "C11 平台支撑\n验证码与审计" as P
+database "账户数据\nuser_account" as D
+
+A -> UI : 填写手机号、昵称与密码
+UI -> S : 请求发送验证码（手机号）
+S -> P : 校验获取频率并调用短信适配
+P --> S : 发送结果
+S --> UI : 验证码获取结果与倒计时
+break 验证码通道不可用或获取频率超限
+    UI --> A : 提示稍后重试
+end
+A -> UI : 输入验证码，勾选协议与隐私政策
+UI -> S : registerAccount(注册资料、验证码、协议确认)
+S -> P : 校验验证码、密码强度与协议确认
+P --> S : 校验结果
+break 验证码错误或过期、密码过弱、未同意协议
+    S --> UI : 返回字段错误与验证码重取提示
+    UI --> A : 保留已填资料，提示修正后重试
+end
+S -> D : 查询手机号与用户名唯一性
+D --> S : 已存在或可创建
+break 手机号或用户名已注册
+    S --> UI : 返回重复账户提示
+    UI --> A : 引导登录或找回密码
+end
+activate S
+S -> P : 生成加盐密码摘要
+P --> S : 密码摘要
+S -> D : 事务保存账户、受控角色、注册时间\n初始实名状态为未实名
+alt 保存成功
+    D --> S : 新账户ID
+    S -> P : 记录注册成功的审计摘要
+    S --> UI : 注册成功
+    UI --> A : 进入登录页
+else 保存失败
+    D --> S : 回滚，不保留半成品账户
+    S -> P : 记录失败原因
+    S --> UI : 注册失败，可重试
+    UI --> A : 显示失败提示
+end
+deactivate S
+note over S,P
+审核员开通方式尚未确定。
+注册请求不能自行授予审核权限。
+end note
+
+footer 依据：需求5.1 UC-01  |  部件详细设计 3.1至3.4
+@enduml

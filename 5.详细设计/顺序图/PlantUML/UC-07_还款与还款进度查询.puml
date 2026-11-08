@@ -1,0 +1,102 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-07 还款与还款进度查询顺序图
+
+actor "个人贷款用户" as A
+boundary "还款页面" as UI
+control "C07 还款与结清\nRepaymentService" as S
+control "C11 平台支撑\n鉴权与支付适配" as P
+database "计划、收款与还款\nC07自有表" as D
+control "C10 流程协同" as C
+
+ref over UI,S : C11鉴权前置：本人计划、有效会话与对象范围
+A -> UI : 打开还款计划
+UI -> S : queryRepaymentProgress(userId、planId)
+S -> D : 读取已激活计划、账单和历史还款
+D --> S : 应还、已还、剩余、期数与收款处理中状态
+S --> UI : 还款进度及本金、利息、费用说明
+UI --> A : 展示本期账单、还款日与历史记录
+ref over UI,S : UC-07-1 还款进度查询\n临近还款日时展示提醒，历史记录分页读取
+A -> UI : 选择本期账单并确认支付
+UI -> S : repay(planId、金额、请求号)
+S -> D : 校验计划归属、剩余金额、已还账单与幂等请求
+D --> S : 原请求结果或可受理快照
+break 重复请求、已结清、金额非法或存在相同处理中交易
+    S --> UI : 返回原结果或校验提示，不再次发起扣款
+end
+S -> D : 创建唯一收款单，状态为处理中
+D --> S : paymentNo
+S -> P : invokeExternal(支付请求、paymentNo、金额)
+P --> S : 明确成功、失败或未知
+alt 已确认支付成功
+    activate S
+    S -> D : 同一事务确认收款并追加还款记录\n更新已还金额、剩余金额与完成期数
+    D --> S : 入账成功；同一成功单号只记一次
+    S ->> C : RepaymentPosted(还款ID、paymentNo、eventId)
+    S --> UI : 还款成功与最新进度
+    UI --> A : 显示支付结果
+    deactivate S
+    opt 全部账单清偿且无待确认交易
+        C -> S : inspectSettlement(planId)
+        ref over S,C : UC-08 结清与抵押物处理
+    end
+else 明确支付失败
+    S -> D : 记录失败收款结果，不累计已还
+    S --> UI : 失败原因与重试入口
+else 超时或结果未知
+    S -> D : 保留处理中，不标记账单已还
+    S --> UI : 显示处理中，按原支付单查询确认
+    note over S,P : 对账只查询原单，不用新单重复扣款。
+end
+ref over UI,P : UC-07-2 正常还款\n包含支付确认、回执校验、对账和入账失败恢复
+opt 用户选择提前还款
+    ref over UI,P : UC-07-3 提前还款\n开关关闭时仅展示未开放说明
+end
+
+footer 依据：需求5.1 UC-07、3.1.6  |  部件详细设计 9.2至9.4、12.3
+@enduml

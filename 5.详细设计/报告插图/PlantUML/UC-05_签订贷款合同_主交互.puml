@@ -1,0 +1,54 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "贷款人\n电子合同页" as A
+control "C05\n合同与签署" as S
+control "协作端口\nC04及C11" as X
+database "C05\n合同与签名" as D
+
+
+A -> S : 查询待签合同
+S -> D : 读取全文、条款及版本
+S --> A : 展示合同与关键条款
+A -> S : 确认阅读并提交签名
+S -> X : 获取批准方案\n校验和保存签名文件
+X --> S : 批准快照与文件摘要
+S -> S : 校验版本、阅读及归属
+alt 校验与保存成功
+ S -> D : 同事务保存签名证据\n并置为已签署
+ S --> A : 签约成功
+ S -> S : 发布ContractSigned\n允许进入放款
+else 未确认、版本不符或失败
+ S --> A : 保持原状态并提示修正
+end
+
+@enduml

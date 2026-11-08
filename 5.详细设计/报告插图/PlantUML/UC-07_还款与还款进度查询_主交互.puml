@@ -1,0 +1,53 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "贷款人\n还款页面" as A
+control "C07\n还款与结清" as S
+control "C11\n支付模拟适配" as P
+database "C07\n计划与还款" as D
+
+
+A -> S : 查询本人还款进度
+S -> D : 读取计划及历史还款
+S --> A : 应还、已还、剩余与期数
+A -> S : 确认当期还款及请求号
+S -> D : 校验金额与幂等\n创建唯一收款单
+S -> P : 按原单发起支付
+P --> S : 成功、失败或未知
+alt 已确认成功
+ S -> D : 事务入账并更新完成情况
+ S --> A : 还款成功与最新进度
+else 失败或未知
+ S --> A : 失败或处理中\n不累计已还金额
+end
+
+@enduml

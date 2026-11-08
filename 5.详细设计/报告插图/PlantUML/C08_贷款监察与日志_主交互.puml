@@ -1,0 +1,53 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+control "业务部件\nC01至C07" as B
+control "C08\n生命周期监察" as S
+database "监察记录\n与贷款日志" as D
+control "授权跟进岗位\nC04或C09" as Q
+
+
+B -> S : recordConfirmedEvent(确认事件)
+S -> S : 校验来源、对象和事件号
+S -> D : 检查是否重复处理
+alt 首次确认事件
+ S -> D : 追加阶段记录及脱敏日志
+ opt 满足提醒规则
+  S -> Q : 风险或停留超时提醒
+  Q -> S : resolveFollowup(处理结果)
+  S -> D : 追加跟进记录
+ end
+else 重复事件
+ S --> B : 返回已有记录
+end
+
+@enduml

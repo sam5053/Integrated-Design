@@ -1,0 +1,132 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-11 待审核贷款人工审批顺序图
+
+actor "风控审核人员" as A
+boundary "人工审批页面" as UI
+control "C04 人工审批\nManualReviewService" as S
+control "C02 贷款申请与进度" as L
+control "C05 合同签约" as K
+control "C08 贷款监察" as M
+database "共享数据库\n各部件仅写自有表" as D
+
+ref over UI,S : C11鉴权前置：REVIEWER角色、处理权限与申请范围
+A -> UI : 打开待审核申请
+UI -> S : queryBorrower(applicationId)
+ref over UI,L : UC-10 查询贷款人信息\n展示贷款条件、实名、材料、风险结果与当前申请版本
+S --> UI : 审核视图和有效模型解释
+UI --> A : 展示额度、期限、用途、模型评分与原因
+A -> UI : 查看解释，选择批准、拒绝或退回补件，填写意见
+alt 材料不足，选择退回补件
+    UI -> S : returnForSupplement(applicationId、版本、缺失项)
+    S -> S : 校验处理权限、当前版本及缺失项目
+    group 同一后端事务，分别调用数据主责部件
+        S -> D : 追加退回补件任务及处理记录
+        S -> L : markReviewResult(applicationId、退回补件、版本)
+        L -> D : 按版本更新自身审批阶段与补件要求
+        D --> L : 成功或版本冲突
+        L --> S : 更新结果
+        S -> D : 全部成功则提交，否则整体回滚
+    end
+    alt 保存成功
+        S -> M : recordConfirmedEvent(退回补件事实)
+        S --> UI : 退回成功，展示补件要求
+        note over S,L
+贷款人后续调用supplementMaterials保留旧材料并生成新版本，
+由C10重新发起评估；退回补件不等同于审批拒绝。
+end note
+    else 保存失败或版本冲突
+        S --> UI : 本次未生效，提示刷新后处理
+    end
+else 选择批准或拒绝
+    UI -> S : submitDecision(applicationId、版本、结论、人工意见)
+    S -> L : getApplication(applicationId)
+    L --> S : 当前版本与审批阶段
+    S -> S : 校验已查看当前模型解释、意见非空及尚未审批
+    break 意见为空、解释未查看、模型无效或版本冲突
+        S --> UI : 拒绝提交，提示补全或刷新
+    end
+    activate S
+    group 审批保存事务，C04与C02各写自有数据
+        S -> D : 追加manual_assessment\n同一申请版本最多一个有效人工结论
+        S -> L : markReviewResult(applicationId、结论、版本)
+        L -> D : 按当前版本更新loan_application审批阶段
+        D --> L : 更新结果
+        L --> S : 成功或冲突
+        S -> D : 一致提交；任一步失败均回滚
+    end
+    alt 审批事务失败或并发冲突
+        S --> UI : 本次未生效，提示重试或刷新
+    else 审批结论已确认保存
+        S -> M : recordConfirmedEvent(ManualDecisionMade)
+        alt 人工批准
+            S -> K : generateContract(applicationId、批准方案)
+            K -> S : issueApprovalDecision(applicationId)
+            S --> K : 不可修改的批准方案快照
+            K -> D : 保存合同编号与条款版本\n只写C05自有合同数据
+            alt 合同生成成功
+                D --> K : contractId
+                K --> S : 待签合同
+                S --> UI : 审批成功，通知用户签订合同
+            else 合同生成失败
+                K --> S : 生成失败，需恢复处理
+                S --> UI : 审批已通过，合同待重试生成
+            end
+        else 人工拒绝
+            S --> UI : 返回拒绝结论和可展示的主要因素
+        end
+    end
+    deactivate S
+end
+note over S,K
+模型结果只读，不能被人工覆盖。
+审批阶段仅形成方案预览；实际还款计划在放款成功后由C07创建。
+end note
+
+footer 依据：需求5.1原编号UC-10、3.1.9  |  部件详细设计 6.2至6.4、4.3、7.3
+@enduml

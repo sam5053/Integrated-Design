@@ -1,0 +1,54 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "贷款人\n贷款申请页" as A
+control "C02\n申请与材料" as S
+control "协作端口\nC01及C10" as X
+database "C02\n申请与材料" as D
+
+
+A -> S : 请求产品规则与试算
+S --> A : 额度、期限和还款安排
+A -> S : 提交申请、材料与授权
+S -> X : 核验实名和有效授权
+X --> S : 受控实名与授权摘要
+S -> S : 校验字段、金额及材料
+S -> D : 检查请求幂等与同类申请
+alt 可以受理
+ S -> D : 同事务保存申请快照\n及材料版本
+ S --> A : 申请号与已提交状态
+ S -> X : ApplicationSubmitted\n启动评估流程
+else 不符合条件或重复
+ S --> A : 返回原因或原申请结果
+end
+
+@enduml

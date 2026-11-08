@@ -1,0 +1,55 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "贷款人\n还款支付页" as A
+control "C07\n收款与记账" as S
+control "C11\n支付模拟适配" as P
+database "C07\n账务数据" as D
+
+
+A -> S : repay(计划、金额、请求号)
+S -> D : 校验归属、金额与原单
+alt 重复或原单处理中
+ S --> A : 返回原单，不重复扣款
+else 新的有效还款
+ S -> D : 创建唯一收款单
+ S -> P : 按业务单号支付
+ P --> S : 支付结果与原单号
+ alt 校验后确认成功
+  S -> D : 收款、还款与完成情况\n同一事务一致提交
+  S --> A : 成功，或本地入账待恢复
+ else 失败或未知
+  S --> A : 失败或处理中\n未知只查询原交易
+ end
+end
+
+@enduml

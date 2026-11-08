@@ -1,0 +1,51 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "贷款人\n贷款进度页" as A
+control "C02\n进度查询" as S
+control "各阶段\n受控查询端口" as Q
+database "申请及\n进度只读视图" as D
+
+
+A -> S : getProgress(本人、申请)
+S -> S : 校验会话与对象范围
+S -> D : 读取本人申请及进度
+alt 无申请
+ S --> A : 尚未申请与申请入口
+else 有申请
+ S -> Q : 读取审批、合同\n放款、还款及时间线
+ Q --> S : 已确认状态与更新时间
+ S -> S : 按统一七阶段组装\n附拒绝原因或补件要求
+ S --> A : 只读时间线及后续待办
+end
+
+@enduml

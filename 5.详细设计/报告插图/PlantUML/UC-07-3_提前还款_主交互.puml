@@ -1,0 +1,53 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "贷款人\n提前还款页" as A
+control "C07\n提前还款" as S
+control "C11\n开关与规则" as P
+database "C07\n计划与还款" as D
+
+
+A -> S : 请求提前还款试算
+S -> P : 读取开关和计费规则版本
+alt 未开放或规则未确定
+ S --> A : 展示说明，不发起支付
+else 开关开启且规则有效
+ S -> D : 读取剩余金额及在途交易
+ S --> A : 试算金额、费用与版本
+ A -> S : 确认试算并提交请求号
+ S -> P : 复核开关与规则版本
+ S -> D : 校验快照、余额与幂等
+ ref over S,D : 复用正常还款收款和记账流程
+ S --> A : 支付结果及确认后的结清状态
+end
+
+@enduml

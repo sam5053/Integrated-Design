@@ -1,0 +1,52 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+control "C10或C02\n调用方" as C
+control "C03\n风险评估" as S
+control "受控数据端口\n及C11模型适配" as X
+database "C03\n评估与报告" as D
+
+
+C -> S : evaluateRisk(申请号、版本)
+S -> X : 读取申请、实名、授权\n第三方及历史还款摘要
+X --> S : 数据、来源与版本
+S -> S : 清洗、标准化\n标记缺失和冲突
+S -> X : 调用指定版本模型
+X --> S : 风险等级、原因或异常
+alt 有效结果且申请版本未改变
+ S -> D : 同事务保存评估与报告
+ S --> C : 已确认评估，进入人工审核
+else 无效、超时或版本改变
+ S --> C : 待补件或重试\n不编造结果和自动审批
+end
+
+@enduml

@@ -1,0 +1,53 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "用户\n帮助与规则页" as A
+control "C09\n客户服务" as S
+control "C11\n文件与配置" as P
+database "版本化\n帮助文件" as D
+
+
+A -> S : queryHelpInfo(主题)
+S -> P : 读取有效帮助配置
+P -> D : 查询内容与入口
+P --> S : 帮助、热线与服务时段
+S --> A : 展示帮助中心
+A -> S : 查询须知或贷款规则
+S -> P : 按版本读取文档
+P --> S : 全文、版本与生效日期
+S --> A : 在线展示规则全文
+opt 选择咨询
+ A -> S : queryContactInfo()
+ S --> A : 人工/AI入口及热线\n按启用状态展示说明
+end
+
+@enduml

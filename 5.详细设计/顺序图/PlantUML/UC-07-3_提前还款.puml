@@ -1,0 +1,103 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-07-3 提前还款顺序图
+
+actor "个人贷款用户" as A
+boundary "提前还款试算页面" as UI
+control "C07 还款与结清\nRepaymentService" as S
+control "C11 平台支撑\n功能开关与规则配置" as P
+database "计划、收款与完成情况\nC07自有表" as D
+control "C10 流程协同" as C
+
+ref over UI,S : C11鉴权前置：有效会话、本人计划与对象范围
+A -> UI : 选择提前还款
+UI -> S : 请求提前还款试算（扩展交互）
+S -> P : readConfig(提前还款开关、费用规则与版本)
+P --> S : 启用状态及已确定的规则
+break 功能开关关闭
+    S --> UI : 功能尚未开放
+    UI --> A : 展示说明并保留正常还款入口
+end
+break 计费规则尚未确定或配置不可用
+    S --> UI : 暂不可执行，不能假定费用为零
+    UI --> A : 展示规则说明或咨询入口
+end
+S -> D : 读取剩余应还、计划版本及待确认交易
+D --> S : 当前计划快照
+break 贷款已结清或存在未确认支付
+    S --> UI : 返回既有状态，先确认在途交易
+end
+S -> S : 按已配置规则试算剩余本金、利息和费用
+S --> UI : 试算金额、费用明细、规则版本与有效条件
+UI --> A : 展示试算结果，要求明确确认
+alt 用户取消
+    UI --> A : 返回还款首页，不发起支付
+else 用户确认提前还款
+    A -> UI : 确认按本次试算金额支付
+    UI -> S : repayEarly(planId)\n附请求号及已确认试算版本
+    S -> P : 重新确认开关与规则版本
+    P --> S : 当前启用状态与版本
+    S -> D : 复核剩余金额、版本及幂等请求
+    D --> S : 当前快照或既有结果
+    break 试算已失效、开关变更或重复请求
+        S --> UI : 要求重新试算或返回原请求状态
+    end
+    ref over S,D : 复用UC-07-2唯一收款和记账流程\n只在支付确认成功后累计，失败或未知不算已还
+    alt 提前还款已确认入账
+        S ->> C : RepaymentPosted(原业务单号、eventId)
+        C -> S : inspectSettlement(planId)
+        ref over S,C : UC-08：全部清偿且无待确认交易才完成结清
+        S --> UI : 最新还款结果与结清状态
+    else 支付失败或处理中
+        S --> UI : 返回失败或处理中，不提前置为贷款完成
+    end
+end
+note over S,P : 提前还款属于扩展；本图不自行制定费率、优惠或违约金。
+
+footer 依据：需求4.2贷中用例图、3.1.6  |  部件详细设计 9.3至9.4及概要2.2
+@enduml

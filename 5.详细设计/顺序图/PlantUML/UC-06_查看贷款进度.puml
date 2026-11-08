@@ -1,0 +1,101 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-06 查看贷款进度顺序图
+
+actor "个人贷款用户" as A
+boundary "贷款进度页面" as UI
+control "C11 平台支撑\n访问控制与审计" as P
+control "C02 贷款申请与进度\nLoanProgressService" as S
+database "申请与进度只读视图" as D
+participant "C03至C07\n各阶段受控查询端口" as Q
+control "C08 贷款监察" as M
+
+A -> UI : 进入“我的贷款”并选择申请
+UI -> P : authenticateRequest(Token)
+P --> UI : 可信userId或拒绝
+break 会话无效
+    UI --> A : 提示重新登录
+end
+UI -> S : getProgress(userId、applicationId)
+S -> P : checkObjectAccess(本人、申请)
+P --> S : 访问范围校验结果
+break 非本人申请
+    S --> UI : 拒绝查询并记录越权审计
+end
+S -> D : 读取本人申请与最近进度投影
+D --> S : 申请快照、投影版本和更新时间
+alt 无申请记录
+    S --> UI : 返回空列表与申请入口
+    UI --> A : 提示尚未申请贷款
+else 有申请记录
+    activate S
+    S -> Q : 读取评估、人工结论、合同、放款和还款确认摘要
+    Q --> S : 各部件权威状态、业务版本及更新时间
+    S -> M : queryLoanTimeline(applicationId、本人摘要范围)
+    M --> S : 已确认节点时间与处理结果
+    S -> S : 按统一七阶段组装时间线\n保留各阶段自有状态，不推进业务
+    alt 已拒绝
+        S -> S : 附审批结论与允许向本人展示的影响因素
+    else 待补充材料
+        S -> S : 附缺失项目和补件入口
+    else 正常办理
+        S -> S : 附当前阶段、后续待办与可用还款计划
+    end
+    S -> P : 脱敏输出，记录查询摘要
+    P --> S : 允许展示的进度视图
+    S --> UI : 时间线、完成时间、结果与最近更新时间
+    UI --> A : 展示进度；数据延迟时提示刷新
+    deactivate S
+end
+note over S,M
+统一顺序：身份资料 → 申请 → 核验与评估 → 合同 → 放款 → 贷中 → 完成。
+查询只读业务事实；不会触发审批、签约、放款或入账。
+end note
+
+footer 依据：需求5.1 UC-06、3.1.5  |  部件详细设计 4.2至4.4、10.3、14.2
+@enduml

@@ -1,0 +1,53 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "审核员\n审核记录页" as A
+control "C04\n审核历史" as S
+control "C08\n业务时间线" as M
+database "只读审核视图" as D
+
+
+A -> S : 条件、分页与访问上下文
+S -> S : 校验查询角色及可见范围
+S -> D : 分页读取审核记录
+D --> S : 列表、总数与申请引用
+S --> A : 脱敏历史或空记录提示
+A -> S : 查看单笔处理链路
+S -> M : queryLoanTimeline(申请号)
+M --> S : 已确认阶段与业务摘要
+S --> A : 处理人、时间及状态变化
+opt 请求导出
+ S -> S : 独立校验导出权限\n完整生成后记录审计
+ S --> A : 受控下载或明确失败
+end
+
+@enduml

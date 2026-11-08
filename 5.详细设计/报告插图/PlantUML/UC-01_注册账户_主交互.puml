@@ -1,0 +1,53 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 20
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 170
+skinparam ParticipantPadding 10
+skinparam BoxPadding 8
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 180
+skinparam backgroundColor white
+skinparam sequence {
+ ArrowColor #333333
+ LifeLineBorderColor #909090
+ ParticipantBorderColor #444444
+ ParticipantBackgroundColor #F5F5F5
+ ActorBorderColor #444444
+ ActorBackgroundColor white
+ GroupBorderColor #777777
+ GroupBackgroundColor #F5F5F5
+ GroupBodyBackgroundColor white
+ ReferenceBorderColor #777777
+ ReferenceBackgroundColor #F5F5F5
+}
+skinparam databaseBackgroundColor white
+skinparam databaseBorderColor #555555
+skinparam noteBackgroundColor #FAFAFA
+skinparam noteBorderColor #888888
+skinparam noteFontSize 18
+autonumber
+
+actor "用户\n注册页面" as A
+control "C01\n账户与登录" as S
+control "C11\n验证码适配" as P
+database "C01\n账户数据" as D
+
+
+A -> S : 获取短信验证码
+S -> P : 频率检查并发送
+P --> A : 验证码发送结果
+A -> S : 提交资料、验证码\n及协议确认
+S -> P : 校验验证码与密码
+P --> S : 校验结论
+S -> D : 检查手机号唯一性
+alt 校验通过且未注册
+ S -> D : 事务保存账户\n与密码摘要
+ S --> A : 注册成功，进入登录
+else 校验失败或账户重复
+ S --> A : 返回原因，不创建账户
+end
+
+@enduml

@@ -1,0 +1,118 @@
+@startuml
+hide footbox
+skinparam defaultFontName Microsoft YaHei
+skinparam defaultFontSize 16
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 0
+skinparam dpi 160
+skinparam ParticipantPadding 18
+skinparam BoxPadding 12
+skinparam maxMessageSize 235
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+    ArrowColor #303B46
+    LifeLineBorderColor #8A949D
+    LifeLineBackgroundColor #FFFFFF
+    ParticipantBorderColor #455463
+    ParticipantBackgroundColor #EFF3F6
+    ParticipantFontColor #17212B
+    ActorBorderColor #455463
+    ActorBackgroundColor #FFFFFF
+    ActorFontColor #17212B
+    GroupBorderColor #667582
+    GroupBackgroundColor #F3F5F7
+    GroupBodyBackgroundColor #FFFFFF
+    GroupFontColor #17212B
+    ReferenceBorderColor #667582
+    ReferenceBackgroundColor #F3F5F7
+    ReferenceFontColor #17212B
+    ActivationBorderColor #667582
+    ActivationBackgroundColor #E2EAF0
+    DividerBorderColor #A1ABB4
+    DividerBackgroundColor #F3F5F7
+}
+skinparam databaseBackgroundColor #F6F7F8
+skinparam databaseBorderColor #667582
+skinparam noteBackgroundColor #FFFDF4
+skinparam noteBorderColor #B0A98E
+skinparam noteFontColor #303B46
+skinparam noteFontSize 14
+skinparam titleFontSize 23
+skinparam titleFontColor #17212B
+skinparam footerFontSize 12
+skinparam footerFontColor #667582
+autonumber 1 "<b>00</b>"
+
+title UC-07-2 正常还款顺序图
+
+actor "个人贷款用户" as A
+boundary "还款支付页面" as UI
+control "C07 还款与结清\nRepaymentService / CollectionService" as S
+control "C11 平台支撑\n支付模拟适配与安全校验" as P
+database "收款、还款、计划及完成情况\nC07自有表" as D
+control "C10 流程协同" as C
+
+ref over UI,S : C11鉴权前置：Token有效、计划归本人
+A -> UI : 核对当期金额与支付方式
+alt 用户取消支付
+    UI --> A : 返回还款首页，不调用支付与入账
+else 用户确认支付
+    UI -> S : repay(planId、当期金额、requestNo)
+    S -> D : 读取当前计划、剩余应还及原请求收款单
+    D --> S : 计划快照与幂等查询结果
+    break 已存在同一请求号或同账单处理中收款
+        S --> UI : 返回原支付单和原状态，不再次扣款
+    end
+    S -> S : 校验计划已激活、账单未还、金额合法且不超过剩余
+    break 计划或金额校验失败
+        S --> UI : 返回失败原因，不创建支付交易
+    end
+    S -> D : 保存唯一收款单与待支付金额，置为处理中
+    D --> S : paymentNo
+    S -> P : invokeExternal(模拟支付、paymentNo、金额)
+    P --> S : 标准化支付结果与原业务单号
+    S -> S : 校验回执单号、金额、归属与结果真实性\n真实异步接入时还须验签
+    alt 已确认成功且尚未入账
+        activate S
+        group 同一账务事务
+            S -> D : 按paymentNo确认唯一成功收款
+            S -> D : 追加repayment_record\n更新计划金额及repayment_plan_completion
+            D --> S : 一致提交或整体回滚
+        end
+        alt 入账成功
+            S ->> C : RepaymentPosted(还款ID、paymentNo、eventId)
+            C -> C : publishProgress(确认还款事实)
+            S --> UI : 还款成功与最新余额
+            UI --> A : 显示还款结果
+        else 支付成功但本地入账失败
+            S --> UI : 结果待确认，禁止重新扣款
+            note over S,D : 通过原支付单恢复入账，不能重新发起支付。
+        end
+        deactivate S
+    else 成功回执已处理
+        S -> D : 读取原入账结果
+        D --> S : 原还款ID与金额
+        S --> UI : 幂等返回，不重复累计
+    else 明确失败或回执校验失败
+        S -> D : 保存失败或异常待核对结果，不累计已还
+        S --> UI : 失败或待核对原因
+    else 超时或结果未知
+        S -> D : 保留处理中，不标记账单已还
+        S --> UI : 显示处理中
+        loop 按恢复策略查询，直到明确或转人工
+            C -> S : 重试原单结果确认（同一paymentNo）
+            S -> P : invokeExternal(查询原支付单状态)
+            P --> S : 原交易当前结果
+            S -> S : 成功则复用唯一入账事务；失败则记录失败\n仍未知则保留处理中
+        end
+    end
+end
+note over S,C
+确认入账后才发布进度和C08业务日志。
+全部账单清偿且无待确认交易时进入UC-08。
+end note
+
+footer 依据：需求4.2贷中用例图、5.1 UC-07  |  部件详细设计 9.2至9.4、13.3
+@enduml
