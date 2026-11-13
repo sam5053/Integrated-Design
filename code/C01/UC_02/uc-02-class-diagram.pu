@@ -1,0 +1,90 @@
+@startuml 登录与分流
+
+title UC-02 登录与身份分流类图
+
+package "贷款人客户端" {
+  class LoginController <<Boundary>> {
+    -LoginUseCase loginUseCase
+    +loginByRole(LoginCommand) LoginResult
+  }
+}
+
+package "C01_1 · 账户与登录" {
+  interface LoginUseCase <<Interface>> {
+    +loginByRole(LoginCommand) LoginResult
+  }
+
+  class LoginService <<Application Service>> {
+    -LoginAccountRepository accountRepository
+    +loginByRole(LoginCommand) LoginResult
+  }
+
+  class LoginCommand {
+    +String account
+    +String password
+    +UserRole requestedRole
+  }
+
+  class LoginResult {
+    +LoginStatus loginStatus
+    +String userId
+    +UserRole role
+    +RealNameStatus realNameStatus
+    +isRealNameVerificationRequired() boolean
+  }
+
+  class LoginAccount {
+    -String userId
+    -String account
+    -String password
+    -UserRole role
+    -RealNameStatus realNameStatus
+    +getRole() UserRole
+    +getRealNameStatus() RealNameStatus
+  }
+
+  interface LoginAccountRepository <<Interface>> {
+    +findByAccount(String) LoginAccount
+  }
+
+  enum UserRole {
+    BORROWER
+    REVIEWER
+  }
+
+  enum LoginStatus {
+    SUCCESS
+    INVALID_INPUT
+    ACCOUNT_NOT_FOUND
+    PASSWORD_INCORRECT
+    ACCOUNT_LOCKED
+    ROLE_MISMATCH
+  }
+}
+
+class RealNameStatus <<UC-01>> {
+  UNVERIFIED
+  VERIFIED
+}
+
+LoginController --> LoginUseCase : 调用
+LoginService ..|> LoginUseCase
+LoginService --> LoginAccountRepository
+LoginService ..> LoginCommand
+LoginService ..> LoginResult
+LoginService ..> LoginAccount
+LoginAccountRepository ..> LoginAccount
+LoginResult --> LoginStatus
+LoginResult --> UserRole
+LoginResult --> RealNameStatus
+LoginAccount --> UserRole
+LoginAccount --> UserRole
+LoginAccount --> RealNameStatus
+
+note right of LoginService
+  不使用自定义异常、验证码和密码加密。
+  失败原因通过 LoginStatus 返回。
+  入口角色不能改变账户真实角色。
+end note
+
+@enduml
