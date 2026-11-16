@@ -1,0 +1,129 @@
+@startuml UC_03
+
+title UC-03 实名认证与银行卡绑定类图
+scale 0.8
+
+package "贷款人客户端" {
+  class IdentityAndBankCardController <<Boundary>> {
+    +verifyIdentity(VerifyIdentityCommand) VerifyIdentityResult
+    +bindBankCard(BindBankCardCommand) BindBankCardResult
+  }
+}
+
+package "实名与银行卡管理" {
+  interface VerifyIdentityUseCase <<Interface>> {
+    +verifyIdentity(VerifyIdentityCommand) VerifyIdentityResult
+  }
+
+  interface BindBankCardUseCase <<Interface>> {
+    +bindBankCard(BindBankCardCommand) BindBankCardResult
+  }
+
+  class IdentityService <<Application Service>> {
+    +verifyIdentity(VerifyIdentityCommand) VerifyIdentityResult
+  }
+
+  class BankCardService <<Application Service>> {
+    +bindBankCard(BindBankCardCommand) BindBankCardResult
+  }
+
+  interface IdentityProfileRepository <<Interface>> {
+    +existsByIdNumberOtherUser(String, String) boolean
+    +findByUserId(String) IdentityProfile
+    +save(IdentityProfile) IdentityProfile
+  }
+
+  interface BankCardRepository <<Interface>> {
+    +existsByCardNumber(String) boolean
+    +save(BankCard) BankCard
+  }
+}
+
+package "平台支撑" {
+  interface VerificationProviderClient <<C11_2 Interface>> {
+    +verifyIdentity(String, String) ExternalVerificationResult
+  }
+
+  class IdentityAndBankCardAdapter <<C11_2 Adapter>> {
+    +verifyIdentity(String, String) ExternalVerificationResult
+  }
+
+}
+
+package "模型与结果" {
+  class VerifyIdentityCommand
+  class VerifyIdentityResult
+  class BindBankCardCommand
+  class BindBankCardResult
+  class IdentityProfile
+  class BankCard
+  class ExternalVerificationResult
+
+  enum IdentityVerificationStatus {
+    SUCCESS
+    INVALID_INPUT
+    IDENTITY_ALREADY_BOUND
+    EXTERNAL_REJECTED
+    PENDING_CONFIRMATION
+  }
+
+  enum BankCardBindingStatus {
+    SUCCESS
+    INVALID_INPUT
+    IDENTITY_NOT_VERIFIED
+    CARD_ALREADY_BOUND
+  }
+
+  enum VerificationResultStatus {
+    VERIFIED
+    REJECTED
+    UNKNOWN
+  }
+
+  enum UC_01.RealNameStatus {
+    UNVERIFIED
+    VERIFIED
+  }
+}
+
+IdentityAndBankCardController --> VerifyIdentityUseCase : 调用
+IdentityAndBankCardController --> BindBankCardUseCase : 调用
+IdentityService ..|> VerifyIdentityUseCase
+BankCardService ..|> BindBankCardUseCase
+
+IdentityService --> IdentityProfileRepository
+IdentityService --> VerificationProviderClient
+
+BankCardService --> BankCardRepository
+BankCardService --> IdentityProfileRepository
+BankCardService --> VerificationProviderClient
+
+IdentityAndBankCardAdapter ..|> VerificationProviderClient
+IdentityProfileRepository ..> IdentityProfile
+BankCardRepository ..> BankCard
+
+VerifyIdentityUseCase ..> VerifyIdentityCommand
+VerifyIdentityUseCase ..> VerifyIdentityResult
+BindBankCardUseCase ..> BindBankCardCommand
+BindBankCardUseCase ..> BindBankCardResult
+IdentityService ..> IdentityProfile
+BankCardService ..> BankCard
+VerificationProviderClient ..> ExternalVerificationResult
+
+VerifyIdentityResult --> IdentityVerificationStatus
+VerifyIdentityResult --> RealNameStatus
+BindBankCardResult --> BankCardBindingStatus
+ExternalVerificationResult --> VerificationResultStatus
+IdentityProfile --> RealNameStatus
+
+IdentityAndBankCardController -[hidden]down-> IdentityService
+IdentityService -[hidden]down-> BankCardService
+BankCardService -[hidden]down-> VerificationProviderClient
+
+
+note right of BankCardService
+  实名成功不等于银行卡有效。
+  归属核验通过后才保存。
+end note
+
+@enduml
