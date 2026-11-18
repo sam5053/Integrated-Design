@@ -1,8 +1,9 @@
 @startuml 登录与分流
 
 title UC-02 登录与身份分流类图
+scale 0.9
 
-package "贷款人客户端" {
+package "贷款人与审核人员客户端" {
   class LoginController <<Boundary>> {
     -LoginUseCase loginUseCase
     +loginByRole(LoginCommand) LoginResult
@@ -20,7 +21,7 @@ package "C01_1 · 账户与登录" {
   }
 
   class LoginCommand {
-    +String account
+    +String account : 用户名或手机号
     +String password
     +UserRole requestedRole
   }
@@ -35,16 +36,22 @@ package "C01_1 · 账户与登录" {
 
   class LoginAccount {
     -String userId
-    -String account
+    -String username
+    -String phone
     -String password
     -UserRole role
     -RealNameStatus realNameStatus
+    +getUserId() String
+    +getUsername() String
+    +getPhone() String
+    +getPassword() String
     +getRole() UserRole
     +getRealNameStatus() RealNameStatus
   }
 
   interface LoginAccountRepository <<Interface>> {
-    +findByAccount(String) LoginAccount
+    +findByUsername(String) LoginAccount
+    +findByPhone(String) LoginAccount
   }
 
   enum UserRole {
@@ -57,12 +64,11 @@ package "C01_1 · 账户与登录" {
     INVALID_INPUT
     ACCOUNT_NOT_FOUND
     PASSWORD_INCORRECT
-    ACCOUNT_LOCKED
     ROLE_MISMATCH
   }
 }
 
-class RealNameStatus <<UC-01>> {
+enum RealNameStatus <<UC-01>> {
   UNVERIFIED
   VERIFIED
 }
@@ -78,11 +84,10 @@ LoginResult --> LoginStatus
 LoginResult --> UserRole
 LoginResult --> RealNameStatus
 LoginAccount --> UserRole
-LoginAccount --> UserRole
 LoginAccount --> RealNameStatus
 
 note right of LoginService
-  不使用自定义异常、验证码和密码加密。
+  用户可使用用户名或手机号登录。
   失败原因通过 LoginStatus 返回。
   入口角色不能改变账户真实角色。
 end note

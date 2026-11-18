@@ -17,7 +17,10 @@ public class LoginService implements LoginUseCase {
             return failure(LoginStatus.INVALID_INPUT);
         }
 
-        LoginAccount account = accountRepository.findByAccount(command.account);
+        LoginAccount account = accountRepository.findByUsername(command.account);
+        if (account == null) {
+            account = accountRepository.findByPhone(command.account);
+        }
 
         if (account == null) {
             return failure(LoginStatus.ACCOUNT_NOT_FOUND);

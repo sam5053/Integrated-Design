@@ -1,12 +1,13 @@
 @startuml UC_03
 
-title UC-03 实名认证与银行卡绑定类图
+title UC-03 实名认证与银行卡管理类图
 scale 0.8
 
 package "贷款人客户端" {
   class IdentityAndBankCardController <<Boundary>> {
     +verifyIdentity(VerifyIdentityCommand) VerifyIdentityResult
     +bindBankCard(BindBankCardCommand) BindBankCardResult
+    +queryBankCards(BankCardApplyCommand) BankCardApplyResult
   }
 }
 
@@ -19,12 +20,20 @@ package "实名与银行卡管理" {
     +bindBankCard(BindBankCardCommand) BindBankCardResult
   }
 
+  interface BankCardApplyUseCase <<Interface>> {
+    +queryBankCards(BankCardApplyCommand) BankCardApplyResult
+  }
+
   class IdentityService <<Application Service>> {
     +verifyIdentity(VerifyIdentityCommand) VerifyIdentityResult
   }
 
   class BankCardService <<Application Service>> {
     +bindBankCard(BindBankCardCommand) BindBankCardResult
+  }
+
+  class BankCardApplyService <<Application Service>> {
+    +queryBankCards(BankCardApplyCommand) BankCardApplyResult
   }
 
   interface IdentityProfileRepository <<Interface>> {
@@ -36,6 +45,7 @@ package "实名与银行卡管理" {
   interface BankCardRepository <<Interface>> {
     +existsByCardNumber(String) boolean
     +save(BankCard) BankCard
+    +findByUserId(String) List<BankCard>
   }
 }
 
@@ -55,6 +65,9 @@ package "模型与结果" {
   class VerifyIdentityResult
   class BindBankCardCommand
   class BindBankCardResult
+  class BankCardApplyCommand
+  class BankCardApplyResult
+  class BankCardSummary
   class IdentityProfile
   class BankCard
   class ExternalVerificationResult
@@ -74,6 +87,11 @@ package "模型与结果" {
     CARD_ALREADY_BOUND
   }
 
+  enum BankCardApplyStatus {
+    SUCCESS
+    INVALID_INPUT
+  }
+
   enum VerificationResultStatus {
     VERIFIED
     REJECTED
@@ -88,8 +106,10 @@ package "模型与结果" {
 
 IdentityAndBankCardController --> VerifyIdentityUseCase : 调用
 IdentityAndBankCardController --> BindBankCardUseCase : 调用
+IdentityAndBankCardController --> BankCardApplyUseCase : 调用
 IdentityService ..|> VerifyIdentityUseCase
 BankCardService ..|> BindBankCardUseCase
+BankCardApplyService ..|> BankCardApplyUseCase
 
 IdentityService --> IdentityProfileRepository
 IdentityService --> VerificationProviderClient
@@ -97,6 +117,7 @@ IdentityService --> VerificationProviderClient
 BankCardService --> BankCardRepository
 BankCardService --> IdentityProfileRepository
 BankCardService --> VerificationProviderClient
+BankCardApplyService --> BankCardRepository
 
 IdentityAndBankCardAdapter ..|> VerificationProviderClient
 IdentityProfileRepository ..> IdentityProfile
@@ -106,19 +127,25 @@ VerifyIdentityUseCase ..> VerifyIdentityCommand
 VerifyIdentityUseCase ..> VerifyIdentityResult
 BindBankCardUseCase ..> BindBankCardCommand
 BindBankCardUseCase ..> BindBankCardResult
+BankCardApplyUseCase ..> BankCardApplyCommand
+BankCardApplyUseCase ..> BankCardApplyResult
 IdentityService ..> IdentityProfile
 BankCardService ..> BankCard
+BankCardApplyService ..> BankCardSummary
 VerificationProviderClient ..> ExternalVerificationResult
 
 VerifyIdentityResult --> IdentityVerificationStatus
 VerifyIdentityResult --> RealNameStatus
 BindBankCardResult --> BankCardBindingStatus
+BankCardApplyResult --> BankCardApplyStatus
+BankCardApplyResult --> BankCardSummary
 ExternalVerificationResult --> VerificationResultStatus
 IdentityProfile --> RealNameStatus
 
 IdentityAndBankCardController -[hidden]down-> IdentityService
 IdentityService -[hidden]down-> BankCardService
-BankCardService -[hidden]down-> VerificationProviderClient
+BankCardService -[hidden]down-> BankCardApplyService
+BankCardApplyService -[hidden]down-> VerificationProviderClient
 
 
 note right of BankCardService

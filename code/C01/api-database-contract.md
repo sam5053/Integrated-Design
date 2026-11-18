@@ -4,9 +4,10 @@
 
 - UC-01 注册账户
 - UC-02 登录与身份分流
-- UC-03 实名认证与银行卡绑定
+- UC-03 实名认证与银行卡管理
 
-文档版本：2026-11-16  
+文档版本：2026-11-18
+
 依据：`code/C01/UC_01`、`UC_02`、`UC_03` 当前 Java 类与接口。
 
 > 当前 Java 工程只包含控制器边界类，没有 Spring MVC 注解、HTTP 会话实现或数据库实现类。因此本文中的 URL、HTTP 状态码和 JSON 字段名属于前后端接入契约；请求与响应业务字段严格依据当前 Command、Result 和 Entity 类。
@@ -34,7 +35,7 @@
 ### 1.3 当前重要限制
 
 - UC-02 当前没有返回会话 Token，也未定义后续请求的认证头格式。
-- UC-03 的 `userId` 应来自可信登录会话，不应由浏览器自行提交。
+- UC-03 绑定接口的 `userId` 应来自可信登录会话。银行卡查询接口为当前前后端联调保留了请求体 `userId`；生产环境也必须从登录会话读取并校验银行卡归属。
 - UC-03 外部核验适配器当前是占位实现，会返回 `UNKNOWN`；接入真实服务前，实名认证结果通常为 `PENDING_CONFIRMATION`。
 - UC-03 当前代码没有银行卡归属核验、默认卡和审计功能。
 - 当前密码字段未做摘要或加密，数据库直接对应当前模型的 `password` 字段。这是现状，不是生产安全建议。
@@ -114,7 +115,7 @@
 
 ```json
 {
-  "account": "loan_user",
+  "account": "username/phone",
   "password": "123456",
   "requestedRole": "BORROWER"
 }
@@ -164,7 +165,7 @@
 
 ### 3.2 前端需注意
 
-`realNameVerificationRequired` 是由 `isRealNameVerificationRequired()` 派生的响应字段。当前实现只判断 `role == BORROWER`，没有判断实名状态，因此贷款人即使用户已经实名，也可能返回 `true`。目前前端若需要准确判断，应使用 `realNameStatus == "UNVERIFIED"`。
+`realNameVerificationRequired` 是由 `isRealNameVerificationRequired()` 派生的响应字段。当前实现仅在登录成功、角色为 `BORROWER` 且 `realNameStatus` 为 `UNVERIFIED` 时返回 `true`。
 
 当前 `LoginResult` 没有 `sessionToken` 字段。后续请求如何证明登录身份，需要由认证会话或网关另行定义。
 
@@ -178,6 +179,7 @@
 
 ```json
 {
+  "accountId": "9d7f34f8-74cf-4cc4-a05c-a40a0d66c3cc",
   "realName": "张三",
   "idNumber": "110101199001011234"
 }
@@ -187,10 +189,10 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
+| `accountId`| string | 是 | 账户ID，由系统生成 |
 | `realName` | string | 是 | 真实姓名 |
 | `idNumber` | string | 是 | 身份证号，必须唯一归属一个账户 |
 
-`userId` 存在于 Java `VerifyIdentityCommand` 中，但应由后端控制器从可信登录会话填充，不应由前端直接提交。
 
 成功响应：
 
@@ -199,7 +201,6 @@
   "status": "SUCCESS",
   "realNameStatus": "VERIFIED",
   "maskedIdNumber": "1101**********1234",
-  "identityVersion": 0
 }
 ```
 
@@ -210,7 +211,6 @@
   "status": "IDENTITY_ALREADY_BOUND",
   "realNameStatus": "UNVERIFIED",
   "maskedIdNumber": null,
-  "identityVersion": 0
 }
 ```
 
@@ -224,9 +224,8 @@
 | `EXTERNAL_REJECTED` | 外部实名核验拒绝 | 提示检查姓名和证件号 |
 | `PENDING_CONFIRMATION` | 外部服务返回未知或占位适配器未配置 | 提示稍后重试 |
 
-`identityVersion` 当前没有赋值逻辑，始终为 `0`。前端暂时不应依赖该字段。
 
-## 5. UC-03 银行卡绑定
+## 5. UC-03 银行卡绑定与查询
 
 ### 5.1 绑定银行卡
 
@@ -236,6 +235,7 @@
 
 ```json
 {
+  "accountId": "9d7f34f8-74cf-4cc4-a05c-a40a0d66c3cc",
   "cardNumber": "6222021234567890",
   "bankName": "示例银行"
 }
@@ -245,6 +245,7 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
+| `accountId`| string | 是 | 账户ID，由系统生成 |
 | `cardNumber` | string | 是 | 银行卡号，当前要求全局唯一 |
 | `bankName` | string | 是 | 银行名称 |
 
@@ -279,7 +280,69 @@
 | `IDENTITY_NOT_VERIFIED` | 当前用户尚未实名认证 | 引导先完成实名认证 |
 | `CARD_ALREADY_BOUND` | 卡号已被绑定 | 提示银行卡已存在 |
 
-当前实现没有银行卡归属核验、默认卡解析和银行卡审计。前端不应期望响应中出现 `defaultCardId`。
+
+### 5.2 查询用户名下全部银行卡
+
+`POST /api/bank-cards/query`
+
+请求体：
+
+```json
+{
+  "userId": "9d7f34f8-74cf-4cc4-a05c-a40a0d66c3cc"
+}
+```
+
+字段说明：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `userId` | string | 是 | 要查询银行卡的用户标识，不能为空白 |
+
+成功响应：
+
+```json
+{
+  "status": "SUCCESS",
+  "bankCards": [
+    {
+      "bankName": "示例银行",
+      "maskedCardNumber": "**** **** **** 7890"
+    },
+    {
+      "bankName": "另一家银行",
+      "maskedCardNumber": "**** **** **** 5678"
+    }
+  ]
+}
+```
+
+用户没有银行卡时仍返回成功，`bankCards` 为空数组：
+
+```json
+{
+  "status": "SUCCESS",
+  "bankCards": []
+}
+```
+
+用户标识为空时：
+
+```json
+{
+  "status": "INVALID_INPUT",
+  "bankCards": []
+}
+```
+
+状态说明：
+
+| `status` | 含义 | 前端处理 |
+|---|---|---|
+| `SUCCESS` | 查询完成，包括用户名下没有银行卡 | 使用 `bankCards` 渲染银行卡列表，空数组显示空状态 |
+| `INVALID_INPUT` | `userId` 为空或仅包含空白字符 | 提示登录状态异常或重新登录 |
+
+本次用例约定用户默认已实名，因此查询应用服务不重复检查 `identity_profile`，直接按 `userId` 读取 `bank_card`。响应只提供 `bankName` 和 `maskedCardNumber`，不会把完整银行卡号传给前端。列表顺序由数据库实现决定，建议按 `bound_at DESC` 返回最近绑定的卡。
 
 ## 6. 前端推荐调用顺序
 
@@ -287,7 +350,9 @@
 1. POST /api/accounts/register
 2. POST /api/auth/login
 3. POST /api/identity/verify
-4. POST /api/bank-cards/bind
+4. POST /api/bank-cards/query
+5. POST /api/bank-cards/bind
+
 ```
 
 约束：
@@ -295,6 +360,7 @@
 - 未注册成功的账户不能登录。
 - 未实名账户不能绑定银行卡。
 - 银行卡绑定成功前必须存在当前用户的实名档案。
+- 查询银行卡按用户默认已实名的前提执行，无银行卡返回空列表而非业务失败。
 - 所有业务结果都应检查状态字段，不能只依赖 HTTP 200。
 
 ## 7. 数据库接口
@@ -433,13 +499,19 @@ INSERT INTO bank_card (
     bound_at
 ) VALUES (?, ?, ?, ?, ?);
 
--- 当前仓储声明但服务未调用
-SELECT *
+-- 查询用户名下全部银行卡，供银行卡查询用例调用
+SELECT
+    card_id,
+    user_id,
+    card_number,
+    bank_name,
+    bound_at
 FROM bank_card
-WHERE user_id = ?;
+WHERE user_id = ?
+ORDER BY bound_at DESC, card_id DESC;
 ```
 
-`BankCardRepository.findValidByUserId()` 当前没有调用者，数据库也没有“有效性”字段。实现该接口时目前只能返回用户全部银行卡，或等待业务规则补充后再增加状态字段。
+`BankCardRepository.findByUserId(userId)` 由 `BankCardApplyService` 调用。当前数据库没有“有效性”字段，因此该方法返回用户名下全部银行卡。数据库实现应将查询结果映射为 `BankCard`，应用服务再统一转换为 `BankCardSummary` 并脱敏卡号。
 
 ## 8. 登录数据库查询
 
