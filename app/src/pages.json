@@ -1,0 +1,42 @@
+{
+  "pages": [
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "登录",
+        "backgroundColor": "#123f36"
+      }
+    },
+    {
+      "path": "pages/home/home",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "用户首页",
+        "backgroundColor": "#f4f7f5"
+      }
+    },
+    {
+      "path": "pages/register/register",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "注册账户",
+        "backgroundColor": "#123f36"
+      }
+    },
+    {
+      "path": "pages/real-name/real-name",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "实名认证",
+        "backgroundColor": "#123f36"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "融信贷",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f4f7f5"
+  }
+}

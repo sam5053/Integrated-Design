@@ -11,3 +11,16 @@ Desktop.ini
 
 # 课程 PPT 资料
 PPT/
+
+# 前端依赖与构建产物
+node_modules/
+dist/
+*.tsbuildinfo
+frontend/mobile/screenshots/
+app/screenshots/
+unpackage/
+
+# 本地环境变量
+.env
+.env.local
+.env.*.local
