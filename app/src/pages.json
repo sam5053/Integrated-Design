@@ -17,6 +17,22 @@
       }
     },
     {
+      "path": "pages/bank-card/bank-card",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "银行卡",
+        "backgroundColor": "#f4f7f5"
+      }
+    },
+    {
+      "path": "pages/bank-card/bind",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "新增银行卡",
+        "backgroundColor": "#f4f7f5"
+      }
+    },
+    {
       "path": "pages/register/register",
       "style": {
         "navigationStyle": "custom",

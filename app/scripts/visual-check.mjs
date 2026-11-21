@@ -80,6 +80,7 @@ try {
   await page.getByLabel('密码', { exact: true }).locator('input').fill('123456')
   await page.locator('uni-button.button').click()
   await page.getByText('常用功能', { exact: true }).waitFor({ timeout: 10000 })
+  await page.getByText('你好，testuser', { exact: true }).waitFor()
   await page.screenshot({
     path: join(screenshotDir, 'home-app.png'),
     fullPage: true,
@@ -101,6 +102,35 @@ try {
     fullPage: true,
   })
 
+  await page.getByText('银行卡', { exact: true }).click()
+  await page.getByText('已绑定银行卡', { exact: true }).waitFor()
+  await page.getByText('还没有绑定银行卡', { exact: true }).waitFor({
+    timeout: 10000,
+  })
+  await assertNoHorizontalOverflow(page)
+  await page.screenshot({
+    path: join(screenshotDir, 'bank-cards-empty.png'),
+    fullPage: true,
+  })
+
+  await page.locator('uni-button.add-button').click()
+  await page.getByLabel('开户银行').locator('input').fill('中国工商银行')
+  await page.getByLabel('银行卡号').locator('input').fill('6222021234567890')
+  await page.screenshot({
+    path: join(screenshotDir, 'bank-card-bind.png'),
+    fullPage: true,
+  })
+  await page.locator('uni-button.button').click()
+  await page.getByText('中国工商银行', { exact: true }).waitFor({
+    timeout: 10000,
+  })
+  await page.getByText('**** **** **** 7890', { exact: true }).waitFor()
+  await assertNoHorizontalOverflow(page)
+  await page.screenshot({
+    path: join(screenshotDir, 'bank-cards-bound.png'),
+    fullPage: true,
+  })
+
   await page.reload({ waitUntil: 'networkidle' })
   await page.getByLabel('用户名或手机号').waitFor({ timeout: 10000 })
 
@@ -108,7 +138,7 @@ try {
     throw new Error(`页面运行错误：${pageErrors.join(' | ')}`)
   }
 
-  console.log('App 检查通过：注册、登录、实名认证、首页跳转、重新加载后重新登录。')
+  console.log('App 检查通过：注册、登录、实名认证、银行卡绑定、重新加载后重新登录。')
 } finally {
   await context.close()
   await browser.close()

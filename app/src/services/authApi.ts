@@ -6,9 +6,8 @@ import type {
   VerifyIdentityRequest,
   VerifyIdentityResult,
 } from '@/types/auth'
+import { postJson, USE_MOCK } from '@/services/apiClient'
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
-const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
 const reservedUsernames = new Set(['13800138000'])
 const reservedPhones = new Set(['13800138000'])
 
@@ -20,6 +19,7 @@ const runtime = globalThis as typeof globalThis & {
     password: string
     realNameStatus: 'UNVERIFIED' | 'VERIFIED'
   }
+  __mockVerifiedAccountIds?: Set<string>
 }
 
 const mockAccount = runtime.__mockAccount ?? {
@@ -57,11 +57,7 @@ export async function loginByRole(command: LoginCommand): Promise<LoginResult> {
     }
   }
 
-  const result = await sendRequest<LoginResult>({
-    url: `${apiBase()}/api/auth/login`,
-    method: 'POST',
-    data: command,
-  })
+  const result = await postJson<LoginResult>('/api/auth/login', command)
 
   if (result.loginStatus !== 'SUCCESS') {
     throw new Error(loginMessage(result.loginStatus))
@@ -104,11 +100,7 @@ export async function registerAccount(
       }
     }
   } else {
-    result = await sendRequest<RegisterAccountResult>({
-      url: `${apiBase()}/api/accounts/register`,
-      method: 'POST',
-      data: command,
-    })
+    result = await postJson<RegisterAccountResult>('/api/accounts/register', command)
   }
 
   if (result.registrationStatus !== 'SUCCESS') {
@@ -124,6 +116,8 @@ export async function verifyIdentity(
   if (USE_MOCK) {
     await wait()
     mockAccount.realNameStatus = 'VERIFIED'
+    runtime.__mockVerifiedAccountIds ??= new Set<string>()
+    runtime.__mockVerifiedAccountIds.add(request.accountId)
 
     return {
       status: 'SUCCESS',
@@ -132,48 +126,13 @@ export async function verifyIdentity(
     }
   }
 
-  const result = await sendRequest<VerifyIdentityResult>({
-    url: `${apiBase()}/api/identity/verify`,
-    method: 'POST',
-    data: request,
-  })
+  const result = await postJson<VerifyIdentityResult>('/api/identity/verify', request)
 
   if (result.status !== 'SUCCESS') {
     throw new Error(identityMessage(result.status))
   }
 
   return result
-}
-
-function apiBase() {
-  if (!API_BASE_URL) {
-    throw new Error('请先在 .env.local 中配置后端地址')
-  }
-
-  return API_BASE_URL
-}
-
-function sendRequest<T>(options: UniApp.RequestOptions): Promise<T> {
-  return new Promise((resolve, reject) => {
-    uni.request({
-      ...options,
-      header: {
-        'Content-Type': 'application/json',
-        ...options.header,
-      },
-      success(response) {
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          resolve(response.data as T)
-          return
-        }
-
-        reject(new Error(`请求失败：${response.statusCode}`))
-      },
-      fail() {
-        reject(new Error('网络请求失败，请检查后端地址和网络'))
-      },
-    })
-  })
 }
 
 function loginMessage(status: LoginResult['loginStatus']) {

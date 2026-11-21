@@ -1,6 +1,6 @@
 # 融信贷移动端
 
-面向个人贷款用户的 uni-app 手机端，目前包含登录、注册、用户首页和实名状态展示。
+面向个人贷款用户的 uni-app 手机端，目前包含登录、注册、用户首页、实名认证和银行卡管理。
 
 ## 启动
 
@@ -111,8 +111,12 @@ Content-Type: application/json
 - `src/pages/register/register.vue`：注册页面和确认密码校验。
 - `src/pages/real-name/real-name.vue`：姓名和身份证号实名认证页面。
 - `src/pages/home/home.vue`：用户首页。
+- `src/pages/bank-card/bank-card.vue`：已绑定银行卡列表和新增入口。
+- `src/pages/bank-card/bind.vue`：银行名称与银行卡号绑定页面。
 - `src/services/authApi.ts`：登录、注册和实名认证请求。
+- `src/services/bankCardApi.ts`：银行卡查询和绑定请求。
 - `src/services/currentUser.ts`：只在当前运行内存中保存用户。
 - `src/types/auth.ts`：前后端数据结构。
+- `src/types/bankCard.ts`：银行卡接口数据结构。
 
 App 关闭或重新启动后，内存中的当前用户会消失，因此必须重新登录。

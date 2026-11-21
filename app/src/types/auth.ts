@@ -48,13 +48,8 @@ export interface LoginResult {
   realNameVerificationRequired: boolean
 }
 
-export interface VerifyIdentityCommand {
-  userId: string
-  realName: string
-  idNumber: string
-}
-
 export interface VerifyIdentityRequest {
+  accountId: string
   realName: string
   idNumber: string
 }
@@ -63,11 +58,11 @@ export interface VerifyIdentityResult {
   status: IdentityVerificationStatus
   realNameStatus: RealNameStatus
   maskedIdNumber: string | null
-  identityVersion?: number
 }
 
 export interface CurrentUser {
   userId: string
+  nickname?: string
   phone?: string
   role: UserRole
   realNameStatus: RealNameStatus

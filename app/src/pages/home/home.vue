@@ -6,6 +6,7 @@ import type { CurrentUser } from '@/types/auth'
 
 const user = ref<CurrentUser | null>(null)
 const verified = computed(() => user.value?.realNameStatus === 'VERIFIED')
+const displayName = computed(() => user.value?.nickname || '用户')
 
 onShow(() => {
   user.value = getCurrentUser()
@@ -29,8 +30,13 @@ function openLoan() {
   uni.showToast({ title: '贷款申请功能暂未开放', icon: 'none' })
 }
 
-function openMyLoans() {
-  uni.showToast({ title: '我的贷款功能暂未开放', icon: 'none' })
+function openBankCards() {
+  if (!verified.value) {
+    uni.showToast({ title: '请先完成实名认证', icon: 'none' })
+    return
+  }
+
+  uni.navigateTo({ url: '/pages/bank-card/bank-card' })
 }
 
 function logout() {
@@ -59,8 +65,13 @@ function logout() {
 
     <view class="content">
       <view class="user-card">
-        <text class="label">用户名</text>
-        <text class="username">{{ user?.phone || user?.userId }}</text>
+        <view class="user-copy">
+          <text class="greeting">你好，{{ displayName }}</text>
+          <view v-if="verified" class="account-line">
+            <text class="account-label">个人账户</text>
+            <text class="account-status verified">已实名认证</text>
+          </view>
+        </view>
       </view>
 
       <view v-if="!verified" class="notice">
@@ -95,11 +106,13 @@ function logout() {
           <text class="arrow">›</text>
         </view>
 
-        <view class="menu-item" @tap="openMyLoans">
-          <view class="item-icon">账</view>
+        <view class="menu-item" @tap="openBankCards">
+          <view class="item-icon">卡</view>
           <view class="item-text">
-            <text class="item-title">我的贷款</text>
-            <text class="item-desc">查看贷款和还款信息</text>
+            <text class="item-title">银行卡</text>
+            <text class="item-desc">
+              {{ verified ? '查看和绑定银行卡' : '完成实名认证后可用' }}
+            </text>
           </view>
           <text class="arrow">›</text>
         </view>
@@ -165,20 +178,47 @@ function logout() {
 
 .user-card {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   padding: 30rpx;
 }
 
-.label {
-  font-size: 21rpx;
+.user-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.greeting {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #172421;
+  word-break: break-all;
+}
+
+.account-line {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+}
+
+.account-label {
+  font-size: 20rpx;
   color: #83908b;
 }
 
-.username {
-  margin-top: 10rpx;
-  font-size: 38rpx;
-  font-weight: 700;
-  color: #172421;
+.account-status {
+  margin-left: 12rpx;
+  padding: 5rpx 12rpx;
+  font-size: 18rpx;
+  color: #9b642f;
+  border-radius: 6rpx;
+  background: #fff1e3;
+}
+
+.account-status.verified {
+  color: #176b59;
+  background: #e9f4ef;
 }
 
 .notice {

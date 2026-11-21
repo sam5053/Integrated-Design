@@ -39,9 +39,13 @@ async function handleLogin() {
       throw new Error('登录响应数据不完整')
     }
 
+    const loginAccount = account.value.trim()
+    const isPhone = /^1\d{10}$/.test(loginAccount)
+
     setCurrentUser({
       userId: response.userId,
-      phone: /^\d{1,11}$/.test(account.value.trim()) ? account.value.trim() : undefined,
+      nickname: isPhone ? `用户${loginAccount.slice(-4)}` : loginAccount,
+      phone: isPhone ? loginAccount : undefined,
       role: response.role,
       realNameStatus: response.realNameStatus,
     })

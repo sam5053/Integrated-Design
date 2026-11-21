@@ -35,6 +35,7 @@ async function submit() {
 
   try {
     const response = await verifyIdentity({
+      accountId: user.userId,
       realName: name.value.trim(),
       idNumber: idCard.value.toUpperCase(),
     })
